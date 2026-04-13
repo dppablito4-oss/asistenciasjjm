@@ -37,7 +37,7 @@ create table if not exists public.asistencia (
   profesor_encargado text not null,
   estado text not null check (estado in ('Asistio', 'Tardanza')),
   created_at timestamptz not null default now(),
-  unique (estudiante_id, fecha)
+  constraint uq_asistencia_estudiante_fecha unique (estudiante_id, fecha)
 );
 
 create index if not exists idx_asistencia_fecha on public.asistencia(fecha);
@@ -131,7 +131,7 @@ begin
 
   insert into public.asistencia(estudiante_id, fecha, hora, profesor_encargado, estado)
   values (v_student.id, v_fecha, v_hora, v_teacher, v_estado)
-  on conflict (estudiante_id, fecha) do nothing;
+  on conflict do nothing;
 
   if not found then
     return query
