@@ -143,6 +143,14 @@ body {
   padding-top: 12px;
 }
 
+.login-panel label {
+  min-height: auto;
+}
+
+.login-panel .row {
+  margin-top: 8px;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
