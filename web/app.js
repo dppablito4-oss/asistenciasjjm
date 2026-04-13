@@ -16,6 +16,11 @@ const studentsAdminBody = $("students-admin-body");
 const reportBody = $("report-body");
 const scanStatusEl = $("scan-status");
 const sectionsBody = $("sections-body");
+const dashboardRecentBody = $("dashboard-recent-body");
+const loginScreen = $("login-screen");
+const appShell = $("app-shell");
+const navButtons = Array.from(document.querySelectorAll(".nav-btn"));
+const moduleViews = Array.from(document.querySelectorAll(".module-view"));
 
 let currentSession = null;
 let studentsCache = [];
@@ -36,6 +41,77 @@ let lastScanAt = 0;
 let lastScannedText = "";
 let calendarMonthDate = new Date();
 let overrideDateSet = new Set();
+
+function showLoginOnly() {
+  loginScreen.classList.remove("hidden");
+  appShell.classList.add("hidden");
+}
+
+function showAppShell() {
+  loginScreen.classList.add("hidden");
+  appShell.classList.remove("hidden");
+}
+
+function setTopbarUser() {
+  const node = $("top-user-email");
+  if (!node) {
+    return;
+  }
+  node.textContent = currentSession?.user?.email || "";
+}
+
+function applyModuleVisibilityByRole() {
+  const admin = isAdmin();
+  navButtons.forEach((btn) => {
+    const isAdminOnly = btn.dataset.admin === "1";
+    btn.classList.toggle("hidden", isAdminOnly && !admin);
+  });
+  moduleViews.forEach((view) => {
+    const isAdminOnly = view.dataset.adminView === "1";
+    if (isAdminOnly && !admin) {
+      view.classList.add("hidden");
+    }
+  });
+}
+
+function activateView(viewId) {
+  const target = viewId || "dashboard-view";
+  moduleViews.forEach((view) => {
+    view.classList.toggle("hidden", view.id !== target);
+  });
+  navButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.view === target);
+  });
+}
+
+async function refreshDashboardKpis(records = []) {
+  if (!isLoggedIn()) {
+    return;
+  }
+  const totalNode = $("stat-total");
+  const attendanceNode = $("stat-attendance");
+  const sectionsNode = $("stat-sections");
+  const lastNode = $("stat-last");
+  if (!totalNode || !attendanceNode || !sectionsNode || !lastNode) {
+    return;
+  }
+
+  const [studentsRes, sectionsRes] = await Promise.all([
+    supabase.from("estudiantes").select("dni", { count: "exact", head: true }).eq("activo", true),
+    supabase.from("v_sections_admin").select("grado,seccion,activo").eq("activo", true),
+  ]);
+
+  const total = Number(studentsRes.count || 0);
+  const presentUnique = new Set((records || []).map((r) => String(r.dni || "").trim()).filter(Boolean)).size;
+  const ratio = total > 0 ? Math.round((presentUnique / total) * 100) : 0;
+  const last = records?.[0]?.hora ? `Hoy ${records[0].hora}` : "-";
+  const activeSections = Array.isArray(sectionsRes.data) ? sectionsRes.data.length : 0;
+
+  totalNode.textContent = String(total);
+  attendanceNode.textContent = `${ratio}%`;
+  sectionsNode.textContent = String(activeSections);
+  lastNode.textContent = last;
+}
 
 function isAdminEmail(email) {
   const e = String(email || "").trim().toLowerCase();
@@ -62,9 +138,11 @@ function setAuthBadge() {
 
 function updateUiByAuth() {
   setAuthBadge();
+  setTopbarUser();
   $("btn-mark").disabled = !isLoggedIn();
   $("btn-refresh").disabled = !isLoggedIn();
   $("admin-panel").classList.toggle("hidden", !isAdmin());
+  applyModuleVisibilityByRole();
 }
 
 function requireLogin() {
@@ -296,6 +374,7 @@ async function signIn() {
   }
   const auth = await supabase.auth.getSession();
   currentSession = auth.data.session;
+  showAppShell();
   updateUiByAuth();
   setStatus("Login exitoso.");
   await loadBrandingSettings();
@@ -319,10 +398,14 @@ async function signOut() {
     return;
   }
   currentSession = null;
+  showLoginOnly();
   updateUiByAuth();
   todayBody.innerHTML = "";
   overrideBody.innerHTML = "";
   studentsAdminBody.innerHTML = "";
+  if (dashboardRecentBody) {
+    dashboardRecentBody.innerHTML = "";
+  }
   await stopScanner();
   setStatus("Sesion cerrada.");
 }
@@ -378,6 +461,9 @@ async function loadTodayAttendance() {
   }
 
   todayBody.innerHTML = "";
+  if (dashboardRecentBody) {
+    dashboardRecentBody.innerHTML = "";
+  }
   for (const row of data || []) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -389,7 +475,12 @@ async function loadTodayAttendance() {
       <td>${row.profesor_encargado ?? ""}</td>
     `;
     todayBody.appendChild(tr);
+    if (dashboardRecentBody) {
+      dashboardRecentBody.appendChild(tr.cloneNode(true));
+    }
   }
+
+  await refreshDashboardKpis(data || []);
 }
 
 async function loadGlobalSchedule() {
@@ -1465,6 +1556,11 @@ async function exportReportPdf() {
 async function bootstrapAuth() {
   const auth = await supabase.auth.getSession();
   currentSession = auth.data.session;
+  if (isLoggedIn()) {
+    showAppShell();
+  } else {
+    showLoginOnly();
+  }
   updateUiByAuth();
   if (isLoggedIn()) {
     await loadBrandingSettings();
@@ -1479,11 +1575,24 @@ async function bootstrapAuth() {
       $("rp-start-date").value = t;
       $("rp-end-date").value = t;
     }
+    activateView("dashboard-view");
   } else {
     setStatus("Inicia sesion para usar asistencia y admin.", false);
   }
   renderOverrideCalendar();
   applyBrandingToUi();
+}
+
+for (const btn of navButtons) {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.view;
+    const adminOnly = btn.dataset.admin === "1";
+    if (adminOnly && !isAdmin()) {
+      setStatus("No tienes permisos para ese modulo.", false);
+      return;
+    }
+    activateView(target);
+  });
 }
 
 $("btn-login").addEventListener("click", signIn);
@@ -1524,9 +1633,15 @@ $("btn-stop-scan").addEventListener("click", stopScanner);
 
 supabase.auth.onAuthStateChange((_event, session) => {
   currentSession = session;
+  if (session?.user) {
+    showAppShell();
+  } else {
+    showLoginOnly();
+  }
   updateUiByAuth();
   if (session?.user) {
     loadBrandingSettings();
+    activateView("dashboard-view");
   }
 });
 

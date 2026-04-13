@@ -7,10 +7,27 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="page">
-      <section id="brand-hero" class="hero">
+    <main id="login-screen" class="login-screen">
+      <section class="login-panel">
+        <img id="hero-insignia" class="login-badge" alt="Insignia" />
+        <h1 id="brand-title">IE Asistencia</h1>
+        <p class="muted">Acceso al sistema institucional</p>
+
+        <label>
+          Correo
+          <input id="email" type="email" placeholder="admin@colegio.edu" />
+        </label>
+        <label>
+          Clave
+          <input id="password" type="password" placeholder="********" />
+        </label>
+        <div class="row">
+          <button id="btn-login">Ingresar</button>
+        </div>
+        <p id="auth-badge" class="muted">No autenticado</p>
+      </section>
+      <section id="brand-hero" class="login-hero">
         <div class="hero-overlay">
-          <img id="hero-insignia" class="hero-logo" alt="Insignia" />
           <div class="hero-center">
             <h1 id="hero-school-name">IE Asistencia</h1>
             <p id="hero-place-label" class="muted">Plataforma de asistencia escolar</p>
@@ -18,465 +35,297 @@
           <img id="hero-minedu" class="hero-logo" alt="Logo institucional" />
         </div>
       </section>
+    </main>
 
-      <section class="card">
-        <h1 id="brand-title">IE Asistencia</h1>
-        <p class="muted">Panel web conectado a Supabase</p>
-        <p id="auth-badge" class="muted">No autenticado</p>
+    <main id="app-shell" class="app-shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-title">Panel</div>
+        <button class="nav-btn is-active" data-view="dashboard-view">Dashboard</button>
+        <button class="nav-btn" data-view="asistencia-view">Asistencia</button>
+        <button class="nav-btn" data-view="alumnos-view" data-admin="1">Alumnos</button>
+        <button class="nav-btn" data-view="reportes-view" data-admin="1">Reportes</button>
+        <button class="nav-btn" data-view="config-view" data-admin="1">Configuracion</button>
+      </aside>
 
-        <div class="grid two">
-          <label>
-            Correo
-            <input id="email" type="email" placeholder="admin@colegio.edu" />
-          </label>
-          <label>
-            Clave
-            <input id="password" type="password" placeholder="********" />
-          </label>
-        </div>
-
-        <div class="row">
-          <button id="btn-login">Ingresar</button>
-          <button id="btn-logout" class="ghost">Salir</button>
-        </div>
-
-        <hr />
-
-        <div class="grid two">
-          <label>
-            Profesor encargado
-            <input id="teacher" type="text" placeholder="Prof. Ramirez" />
-          </label>
-          <label>
-            Token/DNI
-            <input id="qr-token" type="text" placeholder="Escanea o pega token" />
-          </label>
-        </div>
-
-        <div class="row">
-          <button id="btn-mark">Marcar asistencia</button>
-          <button id="btn-refresh" class="ghost">Actualizar hoy</button>
-          <button id="btn-start-scan" class="ghost">Iniciar escaner QR</button>
-          <button id="btn-stop-scan" class="ghost">Detener escaner</button>
-        </div>
-
-        <p id="scan-status" class="muted">Escaner detenido.</p>
-        <div id="qr-reader" class="qr-reader hidden"></div>
-
-        <p id="status" class="status">Listo.</p>
-      </section>
-
-      <section id="admin-panel" class="card hidden">
-        <h2>Admin</h2>
-        <p class="muted">Configura horarios como una agenda diaria de institucion.</p>
-
-        <h3>Identidad institucional</h3>
-        <div class="grid four">
-          <label>
-            Nombre institucion
-            <input id="brand-school-name" type="text" placeholder="IE Asistencia" />
-          </label>
-          <label>
-            Lugar (pie de carnet/reporte)
-            <input id="brand-place-label" type="text" placeholder="Huanuco" />
-          </label>
-          <label>
-            Foto panoramica (URL)
-            <input id="brand-panoramic-url" type="url" placeholder="https://.../panoramica.jpg" />
-          </label>
-          <label>
-            
-            <button id="btn-save-branding" type="button">Guardar identidad</button>
-          </label>
-        </div>
-
-        <div class="grid two">
-          <label>
-            Insignia principal (URL)
-            <input id="brand-insignia-url" type="url" placeholder="https://.../insignia.png" />
-          </label>
-          <label>
-            Logo secundario/MINEDU (URL)
-            <input id="brand-minedu-url" type="url" placeholder="https://.../logo-secundario.png" />
-          </label>
-        </div>
-
-        <div class="grid three">
-          <label>
-            Subir portada (JPG/PNG)
-            <input id="brand-panoramic-file" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-          <label>
-            Subir insignia (PNG)
-            <input id="brand-insignia-file" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-          <label>
-            Subir logo secundario (PNG)
-            <input id="brand-minedu-file" type="file" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </div>
-        <p class="muted">Si subes archivos, el panel los guarda en Supabase Storage y actualiza las URLs automaticamente.</p>
-
-        <hr />
-
-        <h3>Horario general</h3>
-        <div class="grid three">
-          <label>
-            Hora entrada
-            <input id="global-entry-time" type="time" value="08:00" />
-          </label>
-          <label>
-            Tolerancia (min)
-            <input id="global-tolerance" type="number" min="0" value="10" />
-          </label>
-          <label>
-            
-            <button id="btn-save-global" type="button">Guardar horario general</button>
-          </label>
-        </div>
-
-        <hr />
-
-        <h3>Excepcion por fecha</h3>
-        <div class="calendar-wrap">
-          <div class="calendar-head row">
-            <button id="btn-cal-prev" class="ghost" type="button">Mes anterior</button>
-            <strong id="calendar-title"></strong>
-            <button id="btn-cal-next" class="ghost" type="button">Mes siguiente</button>
+      <section class="shell-main">
+        <header class="topbar">
+          <div class="top-title">Sistema de Asistencia</div>
+          <div class="row">
+            <span id="top-user-email" class="muted"></span>
+            <button id="btn-logout" class="ghost">Salir</button>
           </div>
-          <div id="override-calendar" class="calendar-grid"></div>
-          <p class="muted">Tip: haz clic en un dia para cargar automaticamente la fecha especial.</p>
-        </div>
+        </header>
 
-        <div class="grid two">
-          <label>
-            Fecha especial
-            <input id="override-date" type="date" />
-          </label>
-          <label>
-            Motivo
-            <input id="override-reason" type="text" placeholder="Dia de la Madre / Desfile" />
-          </label>
-        </div>
-        <div class="grid three">
-          <label>
-            Hora entrada especial
-            <input id="override-entry-time" type="time" value="09:00" />
-          </label>
-          <label>
-            Tolerancia (min)
-            <input id="override-tolerance" type="number" min="0" value="15" />
-          </label>
-          <label>
-            
-            <button id="btn-save-override" type="button">Guardar excepcion</button>
-          </label>
-        </div>
+        <section id="dashboard-view" class="module-view">
+          <section class="hero">
+            <div class="hero-overlay">
+              <img class="hero-logo" id="dashboard-insignia" alt="Insignia" />
+              <div class="hero-center">
+                <h1 id="dashboard-title">IE Asistencia</h1>
+                <p class="muted" id="dashboard-subtitle">Dashboard institucional</p>
+              </div>
+              <img class="hero-logo" id="dashboard-minedu" alt="Logo" />
+            </div>
+          </section>
 
-        <div class="row">
-          <button id="btn-refresh-overrides" class="ghost" type="button">Actualizar lista</button>
-        </div>
+          <div class="stats-grid">
+            <article class="stat-card"><h4>Total Alumnos</h4><p id="stat-total">0</p></article>
+            <article class="stat-card"><h4>Asistencia Hoy</h4><p id="stat-attendance">0%</p></article>
+            <article class="stat-card"><h4>Clases Activas</h4><p id="stat-sections">0</p></article>
+            <article class="stat-card"><h4>Ultimo Registro</h4><p id="stat-last">-</p></article>
+          </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Entrada</th>
-                <th>Tolerancia</th>
-                <th>Motivo</th>
-                <th>Accion</th>
-              </tr>
-            </thead>
-            <tbody id="override-body"></tbody>
-          </table>
-        </div>
+          <section class="card">
+            <h2>Ultimos Registros</h2>
+            <p id="today-date" class="muted"></p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>DNI</th>
+                    <th>Estudiante</th>
+                    <th>Grado</th>
+                    <th>Estado</th>
+                    <th>Profesor</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-recent-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
 
-        <hr />
+        <section id="asistencia-view" class="module-view hidden">
+          <section class="card">
+            <h2>Modulo de Registro de Asistencia</h2>
+            <div class="grid two">
+              <label>
+                Profesor encargado
+                <input id="teacher" type="text" placeholder="Prof. Ramirez" />
+              </label>
+              <label>
+                Token/DNI
+                <input id="qr-token" type="text" placeholder="Escanea o pega token" />
+              </label>
+            </div>
+            <div class="row">
+              <button id="btn-mark">Marcar asistencia</button>
+              <button id="btn-refresh" class="ghost">Actualizar hoy</button>
+              <button id="btn-start-scan" class="ghost">Iniciar escaner QR</button>
+              <button id="btn-stop-scan" class="ghost">Detener escaner</button>
+            </div>
+            <p id="scan-status" class="muted">Escaner detenido.</p>
+            <div id="qr-reader" class="qr-reader hidden"></div>
+            <p id="status" class="status">Listo.</p>
+          </section>
 
-        <h3>Catalogo de secciones</h3>
-        <p class="muted">Administra grados/secciones activas para registros e importaciones.</p>
+          <section class="card">
+            <h2>Asistencias de hoy</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>DNI</th>
+                    <th>Estudiante</th>
+                    <th>Grado</th>
+                    <th>Estado</th>
+                    <th>Profesor</th>
+                  </tr>
+                </thead>
+                <tbody id="today-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
 
-        <div class="grid four">
-          <label>
-            Grado
-            <input id="sec-grado" type="number" min="1" max="5" value="1" />
-          </label>
-          <label>
-            Seccion
-            <input id="sec-seccion" type="text" value="A" />
-          </label>
-          <label>
-            Activa
-            <select id="sec-activo">
-              <option value="1">Si</option>
-              <option value="0">No</option>
-            </select>
-          </label>
-          <label>
-            
-            <button id="btn-save-section" type="button">Guardar seccion</button>
-          </label>
-        </div>
+        <section id="alumnos-view" class="module-view hidden" data-admin-view="1">
+          <section class="card">
+            <h2>Alumnos</h2>
+            <p class="muted">Edita datos, estado, QR y carnets.</p>
 
-        <div class="row">
-          <button id="btn-refresh-sections" class="ghost" type="button">Actualizar secciones</button>
-        </div>
+            <div class="grid two">
+              <label>
+                Buscar (dni/nombre)
+                <input id="student-search" type="text" placeholder="Ej. 12345678 o Lopez" />
+              </label>
+              <label>
+                <button id="btn-refresh-students" type="button" class="ghost">Actualizar alumnos</button>
+              </label>
+            </div>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Grado</th>
-                <th>Seccion</th>
-                <th>Estado</th>
-                <th>Accion</th>
-              </tr>
-            </thead>
-            <tbody id="sections-body"></tbody>
-          </table>
-        </div>
+            <div class="grid four">
+              <label>DNI<input id="st-dni" type="text" maxlength="8" placeholder="12345678" /></label>
+              <label>Nombres<input id="st-nombres" type="text" placeholder="Ana" /></label>
+              <label>Apellidos<input id="st-apellidos" type="text" placeholder="Lopez" /></label>
+              <label>Fecha nacimiento<input id="st-birth-date" type="date" /></label>
+            </div>
 
-        <hr />
+            <div class="grid four">
+              <label>Grado<input id="st-grado" type="number" min="1" max="5" value="1" /></label>
+              <label>Seccion<input id="st-seccion" type="text" value="A" /></label>
+              <label>Genero
+                <select id="st-genero"><option value="F">F</option><option value="M">M</option></select>
+              </label>
+              <label>Cargo<input id="st-cargo" type="text" value="Alumno" /></label>
+            </div>
 
-        <h3>Alumnos</h3>
-        <p class="muted">Edita datos, estado (activo/retiro/traslado) y genera QR/carnet.</p>
+            <div class="grid three">
+              <label>Estado
+                <select id="st-status"><option value="ACTIVO">ACTIVO</option><option value="RETIRADO">RETIRADO</option><option value="TRASLADADO">TRASLADADO</option></select>
+              </label>
+              <label>Nota estado<input id="st-status-note" type="text" placeholder="Motivo o institucion destino" /></label>
+              <label><input id="st-id" type="hidden" /><button id="btn-save-student" type="button">Guardar alumno</button></label>
+            </div>
 
-        <div class="grid two">
-          <label>
-            Buscar (dni/nombre)
-            <input id="student-search" type="text" placeholder="Ej. 12345678 o Lopez" />
-          </label>
-          <label>
-            
-            <button id="btn-refresh-students" type="button" class="ghost">Actualizar alumnos</button>
-          </label>
-        </div>
+            <div class="row">
+              <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
+              <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
+              <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
+              <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
+              <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
+            </div>
 
-        <div class="grid four">
-          <label>
-            DNI
-            <input id="st-dni" type="text" maxlength="8" placeholder="12345678" />
-          </label>
-          <label>
-            Nombres
-            <input id="st-nombres" type="text" placeholder="Ana" />
-          </label>
-          <label>
-            Apellidos
-            <input id="st-apellidos" type="text" placeholder="Lopez" />
-          </label>
-          <label>
-            Fecha nacimiento
-            <input id="st-birth-date" type="date" />
-          </label>
-        </div>
+            <div class="grid two">
+              <label>Importar alumnos (CSV/XLSX)<input id="students-file" type="file" accept=".csv,.xlsx,.xls" /></label>
+              <label><button id="btn-import-students" class="ghost" type="button">Importar archivo</button></label>
+            </div>
+            <p id="import-summary" class="muted"></p>
+            <div class="row">
+              <button id="btn-export-import-errors" class="ghost" type="button">Descargar errores de importacion</button>
+            </div>
 
-        <div class="grid four">
-          <label>
-            Grado
-            <input id="st-grado" type="number" min="1" max="5" value="1" />
-          </label>
-          <label>
-            Seccion
-            <input id="st-seccion" type="text" value="A" />
-          </label>
-          <label>
-            Genero
-            <select id="st-genero">
-              <option value="F">F</option>
-              <option value="M">M</option>
-            </select>
-          </label>
-          <label>
-            Cargo
-            <input id="st-cargo" type="text" value="Alumno" />
-          </label>
-        </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>DNI</th><th>Estudiante</th><th>Grado</th><th>Genero</th><th>Estado</th><th>Edad</th><th>Accion</th>
+                  </tr>
+                </thead>
+                <tbody id="students-admin-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
 
-        <div class="grid three">
-          <label>
-            Estado
-            <select id="st-status">
-              <option value="ACTIVO">ACTIVO</option>
-              <option value="RETIRADO">RETIRADO</option>
-              <option value="TRASLADADO">TRASLADADO</option>
-            </select>
-          </label>
-          <label>
-            Nota estado
-            <input id="st-status-note" type="text" placeholder="Motivo o institucion destino" />
-          </label>
-          <label>
-            
-            <input id="st-id" type="hidden" />
-            <button id="btn-save-student" type="button">Guardar alumno</button>
-          </label>
-        </div>
+        <section id="reportes-view" class="module-view hidden" data-admin-view="1">
+          <section class="card">
+            <h2>Centro de Reportes</h2>
+            <p class="muted">Filtros por periodo, grado, seccion, genero, cargo y estado.</p>
+            <div class="grid four">
+              <label>Periodo<select id="rp-period"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mes</option><option value="range">Rango</option></select></label>
+              <label>Fecha referencia<input id="rp-ref-date" type="date" /></label>
+              <label>Inicio<input id="rp-start-date" type="date" /></label>
+              <label>Fin<input id="rp-end-date" type="date" /></label>
+            </div>
+            <div class="grid four">
+              <label>Grado<select id="rp-grado"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+              <label>Seccion<input id="rp-seccion" type="text" placeholder="A / B / C" /></label>
+              <label>Genero<select id="rp-genero"><option value="">Todos</option><option value="F">F</option><option value="M">M</option></select></label>
+              <label>Cargo<input id="rp-cargo" type="text" placeholder="Alumno / Brigadier" /></label>
+            </div>
+            <div class="grid three">
+              <label>Condicion<select id="rp-condition"><option value="all">Todos</option><option value="present">Asistieron</option><option value="absent">Faltaron</option></select></label>
+              <label><button id="btn-run-report" type="button">Generar reporte</button></label>
+              <label><button id="btn-export-report-csv" class="ghost" type="button">Exportar CSV</button></label>
+            </div>
+            <div class="row">
+              <button id="btn-export-report-xlsx" class="ghost" type="button">Exportar XLSX</button>
+              <button id="btn-export-report-pdf" class="ghost" type="button">Exportar PDF</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th><th>Hora</th><th>DNI</th><th>Nombres</th><th>Apellidos</th><th>Grado</th><th>Seccion</th><th>Genero</th><th>Cargo</th><th>Profesor</th><th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="report-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
 
-        <div class="row">
-          <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
-          <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
-          <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
-          <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
-          <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
-        </div>
+        <section id="config-view" class="module-view hidden" data-admin-view="1">
+          <section id="admin-panel" class="card">
+            <h2>Configuracion Admin</h2>
+            <p class="muted">Identidad institucional, horarios, excepciones y catalogos.</p>
 
-        <div class="grid two">
-          <label>
-            Importar alumnos (CSV/XLSX)
-            <input id="students-file" type="file" accept=".csv,.xlsx,.xls" />
-          </label>
-          <label>
-            
-            <button id="btn-import-students" class="ghost" type="button">Importar archivo</button>
-          </label>
-        </div>
-        <p id="import-summary" class="muted"></p>
-        <div class="row">
-          <button id="btn-export-import-errors" class="ghost" type="button">Descargar errores de importacion</button>
-        </div>
+            <h3>Identidad institucional</h3>
+            <div class="grid four">
+              <label>Nombre institucion<input id="brand-school-name" type="text" placeholder="IE Asistencia" /></label>
+              <label>Lugar (pie de carnet/reporte)<input id="brand-place-label" type="text" placeholder="Huanuco" /></label>
+              <label>Foto panoramica (URL)<input id="brand-panoramic-url" type="url" placeholder="https://.../panoramica.jpg" /></label>
+              <label><button id="btn-save-branding" type="button">Guardar identidad</button></label>
+            </div>
+            <div class="grid two">
+              <label>Insignia principal (URL)<input id="brand-insignia-url" type="url" placeholder="https://.../insignia.png" /></label>
+              <label>Logo secundario/MINEDU (URL)<input id="brand-minedu-url" type="url" placeholder="https://.../logo-secundario.png" /></label>
+            </div>
+            <div class="grid three">
+              <label>Subir portada (JPG/PNG)<input id="brand-panoramic-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+              <label>Subir insignia (PNG)<input id="brand-insignia-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+              <label>Subir logo secundario (PNG)<input id="brand-minedu-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+            </div>
+            <p class="muted">Si subes archivos, el panel los guarda en Supabase Storage y actualiza las URLs automaticamente.</p>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>DNI</th>
-                <th>Estudiante</th>
-                <th>Grado</th>
-                <th>Genero</th>
-                <th>Estado</th>
-                <th>Edad</th>
-                <th>Accion</th>
-              </tr>
-            </thead>
-            <tbody id="students-admin-body"></tbody>
-          </table>
-        </div>
+            <hr />
 
-        <hr />
+            <h3>Horario general</h3>
+            <div class="grid three">
+              <label>Hora entrada<input id="global-entry-time" type="time" value="08:00" /></label>
+              <label>Tolerancia (min)<input id="global-tolerance" type="number" min="0" value="10" /></label>
+              <label><button id="btn-save-global" type="button">Guardar horario general</button></label>
+            </div>
 
-        <h3>Centro de reportes</h3>
-        <p class="muted">Filtros por periodo, grado, seccion, genero, cargo y estado con exportacion.</p>
+            <hr />
 
-        <div class="grid four">
-          <label>
-            Periodo
-            <select id="rp-period">
-              <option value="day">Dia</option>
-              <option value="week">Semana</option>
-              <option value="month">Mes</option>
-              <option value="range">Rango</option>
-            </select>
-          </label>
-          <label>
-            Fecha referencia
-            <input id="rp-ref-date" type="date" />
-          </label>
-          <label>
-            Inicio
-            <input id="rp-start-date" type="date" />
-          </label>
-          <label>
-            Fin
-            <input id="rp-end-date" type="date" />
-          </label>
-        </div>
+            <h3>Excepcion por fecha</h3>
+            <div class="calendar-wrap">
+              <div class="calendar-head row">
+                <button id="btn-cal-prev" class="ghost" type="button">Mes anterior</button>
+                <strong id="calendar-title"></strong>
+                <button id="btn-cal-next" class="ghost" type="button">Mes siguiente</button>
+              </div>
+              <div id="override-calendar" class="calendar-grid"></div>
+              <p class="muted">Tip: haz clic en un dia para cargar automaticamente la fecha especial.</p>
+            </div>
+            <div class="grid two">
+              <label>Fecha especial<input id="override-date" type="date" /></label>
+              <label>Motivo<input id="override-reason" type="text" placeholder="Dia de la Madre / Desfile" /></label>
+            </div>
+            <div class="grid three">
+              <label>Hora entrada especial<input id="override-entry-time" type="time" value="09:00" /></label>
+              <label>Tolerancia (min)<input id="override-tolerance" type="number" min="0" value="15" /></label>
+              <label><button id="btn-save-override" type="button">Guardar excepcion</button></label>
+            </div>
+            <div class="row"><button id="btn-refresh-overrides" class="ghost" type="button">Actualizar lista</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Fecha</th><th>Entrada</th><th>Tolerancia</th><th>Motivo</th><th>Accion</th></tr></thead>
+                <tbody id="override-body"></tbody>
+              </table>
+            </div>
 
-        <div class="grid four">
-          <label>
-            Grado
-            <select id="rp-grado">
-              <option value="">Todos</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-            </select>
-          </label>
-          <label>
-            Seccion
-            <input id="rp-seccion" type="text" placeholder="A / B / C" />
-          </label>
-          <label>
-            Genero
-            <select id="rp-genero">
-              <option value="">Todos</option>
-              <option value="F">F</option>
-              <option value="M">M</option>
-            </select>
-          </label>
-          <label>
-            Cargo
-            <input id="rp-cargo" type="text" placeholder="Alumno / Brigadier" />
-          </label>
-        </div>
+            <hr />
 
-        <div class="grid three">
-          <label>
-            Condicion
-            <select id="rp-condition">
-              <option value="all">Todos</option>
-              <option value="present">Asistieron</option>
-              <option value="absent">Faltaron</option>
-            </select>
-          </label>
-          <label>
-            
-            <button id="btn-run-report" type="button">Generar reporte</button>
-          </label>
-          <label>
-            
-            <button id="btn-export-report-csv" class="ghost" type="button">Exportar CSV</button>
-          </label>
-        </div>
-
-        <div class="row">
-          <button id="btn-export-report-xlsx" class="ghost" type="button">Exportar XLSX</button>
-          <button id="btn-export-report-pdf" class="ghost" type="button">Exportar PDF</button>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>DNI</th>
-                <th>Nombres</th>
-                <th>Apellidos</th>
-                <th>Grado</th>
-                <th>Seccion</th>
-                <th>Genero</th>
-                <th>Cargo</th>
-                <th>Profesor</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="report-body"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Asistencias de hoy</h2>
-        <p id="today-date" class="muted"></p>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>DNI</th>
-                <th>Estudiante</th>
-                <th>Grado</th>
-                <th>Estado</th>
-                <th>Profesor</th>
-              </tr>
-            </thead>
-            <tbody id="today-body"></tbody>
-          </table>
-        </div>
+            <h3>Catalogo de secciones</h3>
+            <div class="grid four">
+              <label>Grado<input id="sec-grado" type="number" min="1" max="5" value="1" /></label>
+              <label>Seccion<input id="sec-seccion" type="text" value="A" /></label>
+              <label>Activa<select id="sec-activo"><option value="1">Si</option><option value="0">No</option></select></label>
+              <label><button id="btn-save-section" type="button">Guardar seccion</button></label>
+            </div>
+            <div class="row"><button id="btn-refresh-sections" class="ghost" type="button">Actualizar secciones</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Grado</th><th>Seccion</th><th>Estado</th><th>Accion</th></tr></thead>
+                <tbody id="sections-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
       </section>
     </main>
 
