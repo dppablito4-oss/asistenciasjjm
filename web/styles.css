@@ -42,7 +42,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 11px;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow-y: auto;
 }
 
 .login-subtle-credit {
@@ -85,6 +86,17 @@ body {
   background-image: linear-gradient(130deg, #1c2d4a 0%, #151f30 42%, #111822 100%);
 }
 
+.login-hero-overlay {
+  min-height: 100vh;
+  grid-template-columns: 1fr;
+  align-content: start;
+  padding: 34px;
+}
+
+.login-hero-overlay .hero-center {
+  max-width: 560px;
+}
+
 .hero {
   min-height: 170px;
   border-radius: 12px;
@@ -124,6 +136,11 @@ body {
 
 .hero-center p {
   margin-top: 8px;
+}
+
+.login-panel .login-subtle-credit {
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 .app-shell {
@@ -661,6 +678,12 @@ tr.is-selected {
     min-height: 48vh;
   }
 
+  .login-hero-overlay {
+    min-height: 48vh;
+    padding: 18px;
+    align-content: center;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -734,6 +757,11 @@ tr.is-selected {
 
   .login-hero {
     min-height: 36vh;
+  }
+
+  .login-hero-overlay {
+    min-height: 36vh;
+    padding: 14px 12px;
   }
 
   .hero-overlay {
