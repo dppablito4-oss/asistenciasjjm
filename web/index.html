@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IE Asistencia - Web</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="card">
+        <h1>IE Asistencia</h1>
+        <p class="muted">Panel web conectado a Supabase</p>
+
+        <div class="grid two">
+          <label>
+            Correo
+            <input id="email" type="email" placeholder="admin@colegio.edu" />
+          </label>
+          <label>
+            Clave
+            <input id="password" type="password" placeholder="********" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btn-login">Ingresar</button>
+          <button id="btn-logout" class="ghost">Salir</button>
+        </div>
+
+        <hr />
+
+        <div class="grid two">
+          <label>
+            Profesor encargado
+            <input id="teacher" type="text" placeholder="Prof. Ramirez" />
+          </label>
+          <label>
+            Token/DNI
+            <input id="qr-token" type="text" placeholder="Escanea o pega token" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btn-mark">Marcar asistencia</button>
+          <button id="btn-refresh" class="ghost">Actualizar hoy</button>
+        </div>
+
+        <p id="status" class="status">Listo.</p>
+      </section>
+
+      <section class="card">
+        <h2>Asistencias de hoy</h2>
+        <p id="today-date" class="muted"></p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>DNI</th>
+                <th>Estudiante</th>
+                <th>Grado</th>
+                <th>Estado</th>
+                <th>Profesor</th>
+              </tr>
+            </thead>
+            <tbody id="today-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
