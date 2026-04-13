@@ -13,11 +13,17 @@ const todayBody = $("today-body");
 const overrideBody = $("override-body");
 const studentsAdminBody = $("students-admin-body");
 const reportBody = $("report-body");
+const scanStatusEl = $("scan-status");
 
 let currentSession = null;
 let studentsCache = [];
 let selectedStudentId = null;
 let lastReportRows = [];
+let branding = { schoolName: "IE Asistencia", placeLabel: "Huanuco" };
+let scannerInstance = null;
+let scannerRunning = false;
+let lastScanAt = 0;
+let lastScannedText = "";
 
 function isAdminEmail(email) {
   const e = String(email || "").trim().toLowerCase();
@@ -69,6 +75,10 @@ function setStatus(text, ok = true) {
   statusEl.textContent = text;
   statusEl.classList.remove("ok", "bad");
   statusEl.classList.add(ok ? "ok" : "bad");
+}
+
+function setScanStatus(text) {
+  scanStatusEl.textContent = text;
 }
 
 function todayIsoDate() {
@@ -155,6 +165,7 @@ async function signOut() {
   todayBody.innerHTML = "";
   overrideBody.innerHTML = "";
   studentsAdminBody.innerHTML = "";
+  await stopScanner();
   setStatus("Sesion cerrada.");
 }
 
@@ -240,6 +251,47 @@ async function loadGlobalSchedule() {
   const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
   $("global-entry-time").value = map.entry_time || "08:00";
   $("global-tolerance").value = Number(map.tolerance_min || 10);
+}
+
+async function loadBrandingSettings() {
+  if (!requireAdmin()) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("app_settings")
+    .select("key,value")
+    .in("key", ["school_name", "place_label"]);
+
+  if (error) {
+    setStatus(`Error cargando identidad: ${error.message}`, false);
+    return;
+  }
+
+  const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
+  branding.schoolName = map.school_name || "IE Asistencia";
+  branding.placeLabel = map.place_label || "Huanuco";
+  $("brand-school-name").value = branding.schoolName;
+  $("brand-place-label").value = branding.placeLabel;
+}
+
+async function saveBrandingSettings() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const schoolName = $("brand-school-name").value.trim();
+  const placeLabel = $("brand-place-label").value.trim();
+  const { error } = await supabase.rpc("set_branding_settings", {
+    p_school_name: schoolName,
+    p_place_label: placeLabel,
+  });
+  if (error) {
+    setStatus(`Error guardando identidad: ${error.message}`, false);
+    return;
+  }
+  branding.schoolName = schoolName || "IE Asistencia";
+  branding.placeLabel = placeLabel || "Huanuco";
+  setStatus("Identidad institucional actualizada.");
 }
 
 async function saveGlobalSchedule() {
@@ -583,6 +635,75 @@ async function studentQrDataUrl(student) {
   });
 }
 
+async function startScanner() {
+  if (!requireLogin()) {
+    return;
+  }
+  if (scannerRunning) {
+    return;
+  }
+
+  if (!window.Html5Qrcode) {
+    setStatus("No se pudo cargar libreria de escaner QR.", false);
+    return;
+  }
+
+  $("qr-reader").classList.remove("hidden");
+  scannerInstance = new window.Html5Qrcode("qr-reader");
+  try {
+    await scannerInstance.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 240 },
+      async (decodedText) => {
+        const now = Date.now();
+        if (decodedText === lastScannedText && now - lastScanAt < 1800) {
+          return;
+        }
+        lastScanAt = now;
+        lastScannedText = decodedText;
+
+        let identifier = decodedText;
+        try {
+          const parsed = JSON.parse(decodedText);
+          identifier = parsed.t || parsed.qr_token || parsed.token || decodedText;
+        } catch {
+          // Keep raw text for DNI fallback.
+        }
+
+        $("qr-token").value = String(identifier).trim();
+        setScanStatus(`Escaneado: ${String(identifier).slice(0, 48)}`);
+        await markAttendance();
+      },
+      () => {}
+    );
+    scannerRunning = true;
+    setScanStatus("Escaner activo. Apunta a un QR.");
+  } catch (err) {
+    $("qr-reader").classList.add("hidden");
+    scannerInstance = null;
+    scannerRunning = false;
+    setStatus(`No se pudo iniciar camara: ${String(err?.message || err)}`, false);
+  }
+}
+
+async function stopScanner() {
+  if (!scannerInstance || !scannerRunning) {
+    setScanStatus("Escaner detenido.");
+    $("qr-reader").classList.add("hidden");
+    return;
+  }
+  try {
+    await scannerInstance.stop();
+    await scannerInstance.clear();
+  } catch {
+    // Ignore cleanup errors.
+  }
+  scannerInstance = null;
+  scannerRunning = false;
+  $("qr-reader").classList.add("hidden");
+  setScanStatus("Escaner detenido.");
+}
+
 function downloadDataUrl(dataUrl, filename) {
   const a = document.createElement("a");
   a.href = dataUrl;
@@ -639,7 +760,7 @@ async function printSelectedCard() {
       </head>
       <body>
         <div class="card">
-          <div class="head">IE Asistencia</div>
+          <div class="head">${branding.schoolName}</div>
           <div class="grid">
             <div>
               <div class="line"><strong>DNI:</strong> ${student.dni}</div>
@@ -647,6 +768,7 @@ async function printSelectedCard() {
               <div class="line"><strong>Grado/Seccion:</strong> ${student.grado}${student.seccion}</div>
               <div class="line"><strong>Estado:</strong> ${student.status}</div>
               <div class="line muted">${student.status_note || ""}</div>
+              <div class="line muted">${branding.placeLabel} - ${new Date().getFullYear()}</div>
             </div>
             <div><img src="${qr}" alt="QR" /></div>
           </div>
@@ -657,6 +779,68 @@ async function printSelectedCard() {
   `);
   w.document.close();
   setStatus("Abierto carnet para imprimir.");
+}
+
+async function printBulkCardsPdf() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const rows = getFilteredStudents();
+  if (!rows.length) {
+    setStatus("No hay alumnos filtrados para carnets.", false);
+    return;
+  }
+
+  setStatus("Generando PDF de carnets, espera un momento...");
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const cardW = 245;
+  const cardH = 140;
+  const cols = 2;
+  const rowsPerPage = 4;
+  const gapX = 18;
+  const gapY = 14;
+  const marginX = (pageW - (cols * cardW + gapX)) / 2;
+  const marginY = 22;
+
+  for (let i = 0; i < rows.length; i++) {
+    const pagePos = i % (cols * rowsPerPage);
+    if (i > 0 && pagePos === 0) {
+      doc.addPage();
+    }
+
+    const col = pagePos % cols;
+    const row = Math.floor(pagePos / cols);
+    const x = marginX + col * (cardW + gapX);
+    const y = marginY + row * (cardH + gapY);
+    const s = rows[i];
+
+    doc.setDrawColor(18, 26, 49);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x, y, cardW, cardH, 8, 8, "FD");
+
+    doc.setFillColor(18, 35, 92);
+    doc.roundedRect(x + 4, y + 4, cardW - 8, 24, 6, 6, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text(branding.schoolName, x + cardW / 2, y + 20, { align: "center" });
+
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(9);
+    doc.text(`DNI: ${s.dni}`, x + 10, y + 46);
+    doc.text(`Alumno: ${s.nombres} ${s.apellidos}`.slice(0, 50), x + 10, y + 62);
+    doc.text(`Grado/Seccion: ${s.grado}${s.seccion}`, x + 10, y + 78);
+    doc.text(`Estado: ${s.status}`, x + 10, y + 94);
+    doc.setTextColor(90, 90, 90);
+    doc.text(`${branding.placeLabel} - ${new Date().getFullYear()}`, x + 10, y + 112);
+
+    const qr = await studentQrDataUrl(s);
+    doc.addImage(qr, "PNG", x + cardW - 88, y + 38, 72, 72);
+  }
+
+  doc.save(`carnets_filtrados_${todayIsoDate()}.pdf`);
+  setStatus("Carnets PDF descargados.");
 }
 
 function csvEscape(v) {
@@ -767,7 +951,14 @@ function exportReportXlsx() {
     setStatus("Primero genera el reporte.", false);
     return;
   }
-  const ws = XLSX.utils.json_to_sheet(lastReportRows);
+  const reportDate = todayIsoDate();
+  const meta = [
+    [branding.schoolName],
+    [`Generado: ${reportDate}`],
+    [""],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(meta);
+  XLSX.utils.sheet_add_json(ws, lastReportRows, { origin: "A4", skipHeader: false });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Reporte");
   XLSX.writeFile(wb, `reporte_asistencia_${todayIsoDate()}.xlsx`);
@@ -781,7 +972,9 @@ function exportReportPdf() {
   }
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   doc.setFontSize(12);
-  doc.text(`Reporte Asistencia - ${todayIsoDate()}`, 36, 30);
+  doc.text(`${branding.schoolName} - Reporte Asistencia`, 36, 24);
+  doc.setFontSize(10);
+  doc.text(`Generado: ${todayIsoDate()} | Sede: ${branding.placeLabel}`, 36, 40);
   const head = [["Fecha", "Hora", "DNI", "Nombres", "Apellidos", "Grado", "Sec", "Genero", "Cargo", "Profesor", "Estado"]];
   const body = lastReportRows.map((r) => [
     r.fecha || "",
@@ -799,7 +992,7 @@ function exportReportPdf() {
   autoTable(doc, {
     head,
     body,
-    startY: 44,
+    startY: 52,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [24, 58, 126] },
   });
@@ -814,6 +1007,7 @@ async function bootstrapAuth() {
   if (isLoggedIn()) {
     await loadTodayAttendance();
     if (isAdmin()) {
+      await loadBrandingSettings();
       await loadGlobalSchedule();
       await loadOverrides();
       await loadStudentsAdmin();
@@ -834,11 +1028,13 @@ $("btn-refresh").addEventListener("click", loadTodayAttendance);
 $("btn-save-global").addEventListener("click", saveGlobalSchedule);
 $("btn-save-override").addEventListener("click", saveOverride);
 $("btn-refresh-overrides").addEventListener("click", loadOverrides);
+$("btn-save-branding").addEventListener("click", saveBrandingSettings);
 $("btn-refresh-students").addEventListener("click", loadStudentsAdmin);
 $("btn-save-student").addEventListener("click", saveStudent);
 $("btn-clear-student").addEventListener("click", clearStudentForm);
 $("btn-download-selected-qr").addEventListener("click", downloadSelectedQr);
 $("btn-print-card").addEventListener("click", printSelectedCard);
+$("btn-print-cards-bulk").addEventListener("click", printBulkCardsPdf);
 $("btn-export-students-csv").addEventListener("click", exportStudentsCsv);
 $("student-search").addEventListener("input", renderStudentsTable);
 $("btn-import-students").addEventListener("click", importStudentsFile);
@@ -846,6 +1042,8 @@ $("btn-run-report").addEventListener("click", runAttendanceReport);
 $("btn-export-report-csv").addEventListener("click", exportReportCsv);
 $("btn-export-report-xlsx").addEventListener("click", exportReportXlsx);
 $("btn-export-report-pdf").addEventListener("click", exportReportPdf);
+$("btn-start-scan").addEventListener("click", startScanner);
+$("btn-stop-scan").addEventListener("click", stopScanner);
 
 supabase.auth.onAuthStateChange((_event, session) => {
   currentSession = session;
