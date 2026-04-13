@@ -7,8 +7,8 @@
   --line: #2a3650;
   --text: #eef3ff;
   --muted: #9daccc;
-  --accent: #3c82f6;
-  --accent-2: #2e66c5;
+  --accent: #3a74bf;
+  --accent-2: #305f9b;
   --ok: #2cb67d;
   --bad: #e16060;
 }
@@ -405,6 +405,10 @@ button {
   min-height: 40px;
 }
 
+button:hover {
+  background: var(--accent-2);
+}
+
 button.ghost {
   background: #243248;
   color: var(--text);
@@ -454,10 +458,26 @@ hr {
 
 .qr-reader {
   margin-top: 10px;
-  border: 1px solid var(--line);
+  width: min(100%, 460px);
+  border: 1px solid #3a4d70;
   border-radius: 12px;
-  padding: 10px;
+  padding: 8px;
   background: #151f2d;
+  box-shadow: 0 8px 22px rgba(2, 7, 18, 0.35);
+}
+
+.qr-reader > div,
+.qr-reader video {
+  border-radius: 10px;
+}
+
+.qr-reader video {
+  object-fit: cover;
+  max-height: 320px;
+}
+
+#qr-reader__scan_region {
+  min-height: 210px;
 }
 
 .calendar-wrap {
@@ -608,6 +628,10 @@ tr.is-selected {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .qr-reader {
+    width: min(100%, 420px);
+  }
 }
 
 @media (max-width: 760px) {
@@ -700,6 +724,10 @@ tr.is-selected {
 
   .actions-row {
     grid-template-columns: 1fr;
+  }
+
+  .qr-reader {
+    width: 100%;
   }
 }
 
