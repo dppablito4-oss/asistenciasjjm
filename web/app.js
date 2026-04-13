@@ -20,6 +20,7 @@ const FALLBACK_LOGO_SVG =
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
+const globalStatusEl = $("global-status");
 const todayBody = $("today-body");
 const overrideBody = $("override-body");
 const studentsAdminBody = $("students-admin-body");
@@ -233,6 +234,12 @@ function setStatus(text, ok = true) {
   statusEl.textContent = text;
   statusEl.classList.remove("ok", "bad");
   statusEl.classList.add(ok ? "ok" : "bad");
+
+  if (globalStatusEl) {
+    globalStatusEl.textContent = text;
+    globalStatusEl.classList.remove("hidden", "ok", "bad");
+    globalStatusEl.classList.add(ok ? "ok" : "bad");
+  }
 }
 
 function setScanStatus(text) {

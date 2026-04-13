@@ -191,6 +191,22 @@ body {
   z-index: 45;
 }
 
+.global-status {
+  margin: 4px 0 0;
+  border: 1px solid #2e466f;
+  background: rgba(20, 35, 58, 0.88);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #d7e6ff;
+  font-size: 0.92rem;
+}
+
+.global-status.bad {
+  border-color: #6c2f3a;
+  background: rgba(63, 20, 28, 0.86);
+  color: #ffdbe1;
+}
+
 .top-user-menu {
   position: relative;
 }

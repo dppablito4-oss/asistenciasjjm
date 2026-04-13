@@ -1,4 +1,4 @@
--- Admin helper RPCs for docente/alumno assignment UI
+-- Hotfix: align helper RPC return columns exactly with declared return types
 
 create or replace function public.list_docentes_admin()
 returns table (
