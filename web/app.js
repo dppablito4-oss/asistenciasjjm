@@ -1399,15 +1399,17 @@ function refreshStudentSectionFilter() {
 
 function getFilteredStudents() {
   const q = String($("student-search").value || "").trim().toLowerCase();
+  const statusFilter = String($("student-filter-status")?.value || "").trim().toUpperCase();
   const gradeFilter = String($("student-filter-grade")?.value || "").trim();
   const sectionFilter = String($("student-filter-section")?.value || "").trim().toUpperCase();
 
   return studentsCache.filter((s) => {
     const full = `${s.dni} ${s.nombres} ${s.apellidos} ${s.status} ${s.status_note || ""}`.toLowerCase();
     const matchSearch = !q || full.includes(q);
+    const matchStatus = !statusFilter || String(s.status || "").toUpperCase() === statusFilter;
     const matchGrade = !gradeFilter || String(s.grado || "") === gradeFilter;
     const matchSection = !sectionFilter || String(s.seccion || "").toUpperCase() === sectionFilter;
-    return matchSearch && matchGrade && matchSection;
+    return matchSearch && matchStatus && matchGrade && matchSection;
   });
 }
 
@@ -1450,7 +1452,7 @@ async function retireStudent(student) {
   if (selectedStudentId === student.id) {
     clearStudentForm();
   }
-  setStatus("Alumno retirado correctamente.");
+  setStatus("Alumno retirado correctamente. Se oculto del listado de activos.");
   await loadStudentsAdmin();
 }
 
@@ -1538,7 +1540,16 @@ async function saveStudent() {
     return;
   }
 
-  const { data, error } = await rpcWithRetry("upsert_student_admin", payload, { label: "guardado de alumno", retries: 2 });
+  let { data, error } = await rpcWithRetry("upsert_student_admin", payload, { label: "guardado de alumno", retries: 2 });
+
+  if (error && String(error.message || "").toLowerCase().includes("estudiantes_dni_key") && !payload.p_id) {
+    const existing = studentsCache.find((s) => String(s.dni || "") === String(payload.p_dni || ""));
+    if (existing?.id) {
+      payload.p_id = existing.id;
+      ({ data, error } = await rpcWithRetry("upsert_student_admin", payload, { label: "reactivacion de alumno", retries: 2 }));
+    }
+  }
+
   if (error) {
     const msg = String(error.message || "");
     if (msg.toLowerCase().includes("gen_random_bytes")) {
@@ -1553,6 +1564,10 @@ async function saveStudent() {
         "No se pudo guardar: la seccion no esta activa en el catalogo. Ve a Configuracion > Catalogo de secciones y activa/crea esa combinacion (grado-seccion).",
         false
       );
+      return;
+    }
+    if (msg.toLowerCase().includes("estudiantes_dni_key")) {
+      setStatus("Ya existe un alumno con ese DNI. Edita el registro existente o usa otro DNI.", false);
       return;
     }
     setStatus(`Error guardando alumno: ${error.message}`, false);
@@ -2420,10 +2435,12 @@ $("btn-print-card").addEventListener("click", printSelectedCard);
 $("btn-print-cards-bulk").addEventListener("click", printBulkCardsPdf);
 $("btn-export-students-csv").addEventListener("click", exportStudentsCsv);
 $("student-search").addEventListener("input", renderStudentsTable);
+$("student-filter-status").addEventListener("change", renderStudentsTable);
 $("student-filter-grade").addEventListener("change", renderStudentsTable);
 $("student-filter-section").addEventListener("change", renderStudentsTable);
 $("btn-student-filters-clear").addEventListener("click", () => {
   $("student-search").value = "";
+  $("student-filter-status").value = "ACTIVO";
   $("student-filter-grade").value = "";
   $("student-filter-section").value = "";
   renderStudentsTable();
