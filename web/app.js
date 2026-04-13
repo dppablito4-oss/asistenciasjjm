@@ -41,7 +41,6 @@ let branding = {
   placeLabel: "Huanuco",
   panoramicUrl: "",
   insigniaUrl: "",
-  mineduLogoUrl: "",
 };
 let sectionsCache = [];
 let lastImportErrors = [];
@@ -273,30 +272,19 @@ function applyBrandingToUi() {
     : "linear-gradient(120deg, #162a61 0%, #0f1f4c 100%)";
 
   const insignia = $("hero-insignia");
-  const minedu = $("hero-minedu");
   const insUrl = safeImageUrl(branding.insigniaUrl);
-  const minUrl = safeImageUrl(branding.mineduLogoUrl);
 
   attachLogoFallback(insignia, "INSIGNIA");
-  attachLogoFallback(minedu, "LOGO");
 
   insignia.src = insUrl || FALLBACK_LOGO_SVG;
   insignia.style.visibility = "visible";
 
-  minedu.src = minUrl || FALLBACK_LOGO_SVG;
-  minedu.style.visibility = "visible";
-
   const dashboardInsignia = $("dashboard-insignia");
-  const dashboardMinedu = $("dashboard-minedu");
   const dashboardTitle = $("dashboard-title");
   const dashboardSubtitle = $("dashboard-subtitle");
   if (dashboardInsignia) {
     attachLogoFallback(dashboardInsignia, "INSIGNIA");
     dashboardInsignia.src = insUrl || FALLBACK_LOGO_SVG;
-  }
-  if (dashboardMinedu) {
-    attachLogoFallback(dashboardMinedu, "LOGO");
-    dashboardMinedu.src = minUrl || FALLBACK_LOGO_SVG;
   }
   if (dashboardTitle) {
     dashboardTitle.textContent = schoolName;
@@ -618,7 +606,7 @@ async function loadBrandingSettings() {
   const { data, error } = await supabase
     .from("app_settings")
     .select("key,value")
-    .in("key", ["school_name", "place_label", "panoramic_url", "insignia_url", "minedu_logo_url"]);
+    .in("key", ["school_name", "place_label", "panoramic_url", "insignia_url"]);
 
   if (error) {
     setStatus(`Error cargando identidad: ${error.message}`, false);
@@ -630,12 +618,10 @@ async function loadBrandingSettings() {
   branding.placeLabel = map.place_label || "Huanuco";
   branding.panoramicUrl = map.panoramic_url || "";
   branding.insigniaUrl = map.insignia_url || "";
-  branding.mineduLogoUrl = map.minedu_logo_url || "";
   $("brand-school-name").value = branding.schoolName;
   $("brand-place-label").value = branding.placeLabel;
   $("brand-panoramic-url").value = branding.panoramicUrl;
   $("brand-insignia-url").value = branding.insigniaUrl;
-  $("brand-minedu-url").value = branding.mineduLogoUrl;
   applyBrandingToUi();
 }
 
@@ -671,14 +657,11 @@ async function saveBrandingSettings() {
   const placeLabel = $("brand-place-label").value.trim();
   const panoramicUrl = $("brand-panoramic-url").value.trim();
   const insigniaUrl = $("brand-insignia-url").value.trim();
-  const mineduLogoUrl = $("brand-minedu-url").value.trim();
   const panoramicFile = $("brand-panoramic-file").files?.[0] || null;
   const insigniaFile = $("brand-insignia-file").files?.[0] || null;
-  const mineduFile = $("brand-minedu-file").files?.[0] || null;
 
   let finalPanoramicUrl = panoramicUrl;
   let finalInsigniaUrl = insigniaUrl;
-  let finalMineduLogoUrl = mineduLogoUrl;
 
   try {
     if (panoramicFile) {
@@ -686,9 +669,6 @@ async function saveBrandingSettings() {
     }
     if (insigniaFile) {
       finalInsigniaUrl = await uploadBrandingAsset(insigniaFile, "insignia");
-    }
-    if (mineduFile) {
-      finalMineduLogoUrl = await uploadBrandingAsset(mineduFile, "minedu");
     }
   } catch (err) {
     setStatus(`Error subiendo imagen institucional: ${String(err.message || err)}`, false);
@@ -707,7 +687,7 @@ async function saveBrandingSettings() {
   const { error: assetsError } = await supabase.rpc("set_branding_assets", {
     p_panoramic_url: finalPanoramicUrl,
     p_insignia_url: finalInsigniaUrl,
-    p_minedu_logo_url: finalMineduLogoUrl,
+    p_minedu_logo_url: "",
   });
   if (assetsError) {
     setStatus(`Error guardando imagenes de identidad: ${assetsError.message}`, false);
@@ -718,13 +698,10 @@ async function saveBrandingSettings() {
   branding.placeLabel = placeLabel || "Huanuco";
   branding.panoramicUrl = finalPanoramicUrl;
   branding.insigniaUrl = finalInsigniaUrl;
-  branding.mineduLogoUrl = finalMineduLogoUrl;
   $("brand-panoramic-url").value = finalPanoramicUrl;
   $("brand-insignia-url").value = finalInsigniaUrl;
-  $("brand-minedu-url").value = finalMineduLogoUrl;
   $("brand-panoramic-file").value = "";
   $("brand-insignia-file").value = "";
-  $("brand-minedu-file").value = "";
   applyBrandingToUi();
   setStatus("Identidad institucional actualizada.");
 }
@@ -1339,11 +1316,8 @@ async function printSelectedCard() {
   }
 
   const insignia = safeImageUrl(branding.insigniaUrl);
-  const minedu = safeImageUrl(branding.mineduLogoUrl);
   const insigniaSrc = insignia || makePlaceholderDataUrl("INSIGNIA");
-  const mineduSrc = minedu || makePlaceholderDataUrl("LOGO");
   const insigniaHtml = `<img class="logo" src="${insigniaSrc}" alt="insignia" />`;
-  const mineduHtml = `<img class="logo" src="${mineduSrc}" alt="logo" />`;
   w.document.write(`
     <html>
       <head>
@@ -1364,7 +1338,6 @@ async function printSelectedCard() {
         <div class="card">
           <div class="logos">
             ${insigniaHtml}
-            ${mineduHtml}
           </div>
           <div class="head">${branding.schoolName}</div>
           <div class="grid">
@@ -1410,7 +1383,6 @@ async function printBulkCardsPdf() {
   const marginX = (pageW - (cols * cardW + gapX)) / 2;
   const marginY = 22;
   const insigniaData = await urlToDataUrl(branding.insigniaUrl);
-  const mineduData = await urlToDataUrl(branding.mineduLogoUrl);
 
   for (let i = 0; i < rows.length; i++) {
     const pagePos = i % (cols * rowsPerPage);
@@ -1438,9 +1410,6 @@ async function printBulkCardsPdf() {
 
     if (insigniaData) {
       doc.addImage(insigniaData, "PNG", x + 10, y + 36, 24, 24);
-    }
-    if (mineduData) {
-      doc.addImage(mineduData, "PNG", x + cardW - 34, y + 36, 24, 24);
     }
 
     doc.setFontSize(9);
@@ -1590,7 +1559,6 @@ async function exportReportPdf() {
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const generatedAt = new Date().toLocaleString("es-PE");
   const insigniaData = await urlToDataUrl(branding.insigniaUrl);
-  const mineduData = await urlToDataUrl(branding.mineduLogoUrl);
 
   const head = [["Fecha", "Hora", "DNI", "Nombres", "Apellidos", "Grado", "Sec", "Genero", "Cargo", "Profesor", "Estado"]];
   const body = lastReportRows.map((r) => [
@@ -1638,9 +1606,6 @@ async function exportReportPdf() {
       if (insigniaData) {
         doc.addImage(insigniaData, "PNG", 24, 9, 34, 34);
       }
-      if (mineduData) {
-        doc.addImage(mineduData, "PNG", pageW - 58, 9, 34, 34);
-      }
 
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
@@ -1656,8 +1621,8 @@ async function exportReportPdf() {
   });
 
   doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
-  if (!insigniaData && !mineduData) {
-    setStatus("Reporte PDF descargado (sin logos: revisa CORS de imagen o usa subida interna).", true);
+  if (!insigniaData) {
+    setStatus("Reporte PDF descargado (sin insignia: revisa CORS de imagen o usa subida interna).", true);
     return;
   }
   setStatus("Reporte PDF descargado.");

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@500;700;800&display=swap");
+
 :root {
   --bg: #0a0f1a;
   --panel: #111827;
@@ -17,7 +19,7 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   color: var(--text);
   background: linear-gradient(180deg, #0a0f1a 0%, #0b1220 100%);
   min-height: 100vh;
@@ -35,11 +37,11 @@ body {
 }
 
 .login-panel {
-  padding: 36px 28px;
+  padding: 38px 30px;
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
   justify-content: center;
 }
 
@@ -66,14 +68,14 @@ body {
 }
 
 .login-badge {
-  width: 120px;
-  height: 120px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
   object-fit: contain;
-  border: 1px solid #334155;
+  border: 1px solid #3a4b67;
   padding: 8px;
-  background: #0f172a;
-  margin-bottom: 8px;
+  background: radial-gradient(circle at 30% 20%, #1d2f55, #0f172a 65%);
+  margin-bottom: 6px;
 }
 
 .login-hero {
@@ -95,12 +97,12 @@ body {
 
 .hero-overlay {
   min-height: 170px;
-  background: linear-gradient(90deg, rgba(2, 6, 14, 0.8), rgba(2, 6, 14, 0.45));
+  background: linear-gradient(100deg, rgba(2, 6, 14, 0.82), rgba(2, 6, 14, 0.54));
   display: grid;
-  grid-template-columns: 86px 1fr 86px;
-  gap: 12px;
+  grid-template-columns: 86px 1fr;
+  gap: 14px;
   align-items: center;
-  padding: 14px;
+  padding: 16px;
 }
 
 .hero-logo {
@@ -115,7 +117,9 @@ body {
 
 .hero-center h1 {
   margin: 0;
-  font-size: 2rem;
+  font-family: "Sora", "Segoe UI", sans-serif;
+  font-size: 2.05rem;
+  letter-spacing: 0.01em;
 }
 
 .hero-center p {
@@ -140,6 +144,7 @@ body {
 
 .sidebar-title {
   font-size: 1.15rem;
+  font-family: "Sora", "Segoe UI", sans-serif;
   font-weight: 700;
   margin-bottom: 6px;
   padding: 8px;
@@ -150,16 +155,50 @@ body {
   border-radius: 10px;
   background: #111827;
   color: var(--text);
-  font-weight: 600;
-  padding: 10px;
+  font-weight: 700;
+  padding: 9px 10px;
   cursor: pointer;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.nav-btn:hover {
+  transform: translateY(-1px);
+  border-color: #2f4668;
+}
+
+.nav-icon {
+  width: 44px;
+  min-width: 44px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #314869;
+  background: #0f1a2d;
+  color: #cfe0ff;
+  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.04em;
+}
+
+.nav-label {
+  letter-spacing: 0.01em;
 }
 
 .nav-btn.is-active {
   background: #1d4ed8;
   color: #eff6ff;
   border-color: #1d4ed8;
+}
+
+.nav-btn.is-active .nav-icon {
+  border-color: #c9dcff;
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
 }
 
 .shell-main {
@@ -179,7 +218,8 @@ body {
 }
 
 .top-title {
-  font-size: 1.1rem;
+  font-size: 1.08rem;
+  font-family: "Sora", "Segoe UI", sans-serif;
   font-weight: 700;
 }
 
@@ -224,6 +264,7 @@ body {
 h1,
 h2,
 h3 {
+  font-family: "Sora", "Segoe UI", sans-serif;
   margin: 0 0 8px;
 }
 
@@ -466,7 +507,14 @@ tr.is-selected {
   .nav-btn {
     white-space: nowrap;
     min-width: max-content;
-    padding: 9px 12px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .nav-icon {
+    width: 38px;
+    min-width: 38px;
+    height: 28px;
   }
 
   .shell-main {
@@ -518,6 +566,10 @@ tr.is-selected {
 
   .hero-center h1 {
     font-size: 1.45rem;
+  }
+
+  .nav-label {
+    font-size: 0.9rem;
   }
 
   .topbar {

@@ -37,7 +37,6 @@
             <h1 id="hero-school-name">IE Asistencia</h1>
             <p id="hero-place-label" class="muted">Plataforma de asistencia escolar</p>
           </div>
-          <img id="hero-minedu" class="hero-logo" alt="Logo institucional" />
         </div>
       </section>
     </main>
@@ -45,11 +44,11 @@
     <main id="app-shell" class="app-shell hidden">
       <aside class="sidebar">
         <div class="sidebar-title">Panel</div>
-        <button class="nav-btn is-active" data-view="dashboard-view">Dashboard</button>
-        <button class="nav-btn" data-view="asistencia-view">Asistencia</button>
-        <button class="nav-btn" data-view="alumnos-view" data-admin="1">Alumnos</button>
-        <button class="nav-btn" data-view="reportes-view" data-admin="1">Reportes</button>
-        <button class="nav-btn" data-view="config-view" data-admin="1">Configuracion</button>
+        <button class="nav-btn is-active" data-view="dashboard-view"><span class="nav-icon">Inicio</span><span class="nav-label">Dashboard</span></button>
+        <button class="nav-btn" data-view="asistencia-view"><span class="nav-icon">QR</span><span class="nav-label">Asistencia</span></button>
+        <button class="nav-btn" data-view="alumnos-view" data-admin="1"><span class="nav-icon">AL</span><span class="nav-label">Alumnos</span></button>
+        <button class="nav-btn" data-view="reportes-view" data-admin="1"><span class="nav-icon">RP</span><span class="nav-label">Reportes</span></button>
+        <button class="nav-btn" data-view="config-view" data-admin="1"><span class="nav-icon">CFG</span><span class="nav-label">Configuracion</span></button>
       </aside>
 
       <section class="shell-main">
@@ -69,7 +68,6 @@
                 <h1 id="dashboard-title">IE Asistencia</h1>
                 <p class="muted" id="dashboard-subtitle">Dashboard institucional</p>
               </div>
-              <img class="hero-logo" id="dashboard-minedu" alt="Logo" />
             </div>
           </section>
 
@@ -266,12 +264,11 @@
             </div>
             <div class="grid two">
               <label>Insignia principal (URL)<input id="brand-insignia-url" type="url" placeholder="https://.../insignia.png" /></label>
-              <label>Logo secundario/MINEDU (URL)<input id="brand-minedu-url" type="url" placeholder="https://.../logo-secundario.png" /></label>
+              <label>Nota visual<input type="text" value="Solo se usa insignia + portada" disabled /></label>
             </div>
-            <div class="grid three">
+            <div class="grid two">
               <label>Subir portada (JPG/PNG)<input id="brand-panoramic-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
               <label>Subir insignia (PNG)<input id="brand-insignia-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-              <label>Subir logo secundario (PNG)<input id="brand-minedu-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
             </div>
             <p class="muted">Si subes archivos, el panel los guarda en Supabase Storage y actualiza las URLs automaticamente.</p>
 
