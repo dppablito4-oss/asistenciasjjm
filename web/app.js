@@ -7,6 +7,16 @@ import { ADMIN_EMAILS, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.j
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const BRANDING_BUCKET = "branding-assets";
+const FALLBACK_LOGO_SVG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'>
+      <rect width='256' height='256' rx='30' fill='#102348'/>
+      <rect x='10' y='10' width='236' height='236' rx='24' fill='none' stroke='#5e81c9' stroke-width='4'/>
+      <text x='50%' y='46%' dominant-baseline='middle' text-anchor='middle' fill='#dbeafe' font-size='64' font-family='Segoe UI' font-weight='700'>IE</text>
+      <text x='50%' y='66%' dominant-baseline='middle' text-anchor='middle' fill='#a5b4fc' font-size='22' font-family='Segoe UI'>LOGO</text>
+    </svg>`
+  );
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
@@ -176,6 +186,78 @@ function safeImageUrl(url) {
   return value || "";
 }
 
+function makePlaceholderDataUrl(text = "LOGO") {
+  const t = String(text || "LOGO").slice(0, 10).toUpperCase();
+  return (
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256' viewBox='0 0 256 256'>
+        <rect width='256' height='256' rx='24' fill='#0f1f44'/>
+        <rect x='10' y='10' width='236' height='236' rx='20' fill='none' stroke='#5b7ec9' stroke-width='3'/>
+        <text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' fill='#e2e8f0' font-size='30' font-family='Segoe UI'>${t}</text>
+      </svg>`
+    )
+  );
+}
+
+function attachLogoFallback(imgEl, fallbackText) {
+  if (!imgEl) {
+    return;
+  }
+  const fb = makePlaceholderDataUrl(fallbackText);
+  imgEl.onerror = () => {
+    imgEl.onerror = null;
+    imgEl.src = fb;
+    imgEl.style.visibility = "visible";
+  };
+}
+
+async function loadImageElementFromFile(file) {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Imagen invalida"));
+      img.src = String(reader.result || "");
+    };
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function normalizeBrandingImage(file, kind) {
+  const cfg =
+    kind === "panoramic"
+      ? { maxW: 1920, maxH: 720, mime: "image/jpeg", quality: 0.9, ext: "jpg", fill: "#0f1f44" }
+      : { maxW: 512, maxH: 512, mime: "image/png", quality: 0.92, ext: "png", fill: null };
+
+  const img = await loadImageElementFromFile(file);
+  const scale = Math.min(1, cfg.maxW / img.width, cfg.maxH / img.height);
+  const targetW = Math.max(1, Math.round(img.width * scale));
+  const targetH = Math.max(1, Math.round(img.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("No se pudo procesar imagen en navegador");
+  }
+
+  if (cfg.fill) {
+    ctx.fillStyle = cfg.fill;
+    ctx.fillRect(0, 0, targetW, targetH);
+  }
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, cfg.mime, cfg.quality));
+  if (!blob) {
+    throw new Error("No se pudo normalizar imagen");
+  }
+  return { blob, ext: cfg.ext, width: targetW, height: targetH };
+}
+
 function applyBrandingToUi() {
   const schoolName = branding.schoolName || "IE Asistencia";
   const place = branding.placeLabel || "Huanuco";
@@ -195,11 +277,33 @@ function applyBrandingToUi() {
   const insUrl = safeImageUrl(branding.insigniaUrl);
   const minUrl = safeImageUrl(branding.mineduLogoUrl);
 
-  insignia.src = insUrl;
-  insignia.style.visibility = insUrl ? "visible" : "hidden";
+  attachLogoFallback(insignia, "INSIGNIA");
+  attachLogoFallback(minedu, "LOGO");
 
-  minedu.src = minUrl;
-  minedu.style.visibility = minUrl ? "visible" : "hidden";
+  insignia.src = insUrl || FALLBACK_LOGO_SVG;
+  insignia.style.visibility = "visible";
+
+  minedu.src = minUrl || FALLBACK_LOGO_SVG;
+  minedu.style.visibility = "visible";
+
+  const dashboardInsignia = $("dashboard-insignia");
+  const dashboardMinedu = $("dashboard-minedu");
+  const dashboardTitle = $("dashboard-title");
+  const dashboardSubtitle = $("dashboard-subtitle");
+  if (dashboardInsignia) {
+    attachLogoFallback(dashboardInsignia, "INSIGNIA");
+    dashboardInsignia.src = insUrl || FALLBACK_LOGO_SVG;
+  }
+  if (dashboardMinedu) {
+    attachLogoFallback(dashboardMinedu, "LOGO");
+    dashboardMinedu.src = minUrl || FALLBACK_LOGO_SVG;
+  }
+  if (dashboardTitle) {
+    dashboardTitle.textContent = schoolName;
+  }
+  if (dashboardSubtitle) {
+    dashboardSubtitle.textContent = `Sede: ${place}`;
+  }
 }
 
 async function urlToDataUrl(url) {
@@ -227,13 +331,17 @@ async function uploadBrandingAsset(file, kind) {
   if (!file) {
     return null;
   }
-  const ext = (file.name.split(".").pop() || "png").toLowerCase();
-  const safeExt = ext.replace(/[^a-z0-9]/g, "") || "png";
+  const normalized = await normalizeBrandingImage(file, kind);
+  const safeExt = normalized.ext;
   const uid = currentSession?.user?.id || "public";
   const filePath = `${uid}/${kind}_${Date.now()}.${safeExt}`;
   const { error } = await supabase.storage
     .from(BRANDING_BUCKET)
-    .upload(filePath, file, { upsert: true, contentType: file.type || undefined });
+    .upload(filePath, normalized.blob, {
+      upsert: true,
+      contentType: normalized.blob.type || undefined,
+      cacheControl: "3600",
+    });
   if (error) {
     throw new Error(error.message);
   }
@@ -1232,8 +1340,10 @@ async function printSelectedCard() {
 
   const insignia = safeImageUrl(branding.insigniaUrl);
   const minedu = safeImageUrl(branding.mineduLogoUrl);
-  const insigniaHtml = insignia ? `<img class="logo" src="${insignia}" alt="insignia" />` : "<div></div>";
-  const mineduHtml = minedu ? `<img class="logo" src="${minedu}" alt="logo" />` : "<div></div>";
+  const insigniaSrc = insignia || makePlaceholderDataUrl("INSIGNIA");
+  const mineduSrc = minedu || makePlaceholderDataUrl("LOGO");
+  const insigniaHtml = `<img class="logo" src="${insigniaSrc}" alt="insignia" />`;
+  const mineduHtml = `<img class="logo" src="${mineduSrc}" alt="logo" />`;
   w.document.write(`
     <html>
       <head>
