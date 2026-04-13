@@ -55,6 +55,10 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -93,6 +97,16 @@ button.ghost {
   color: var(--text);
 }
 
+button.danger {
+  background: #6b1d2a;
+  color: #ffd8df;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 hr {
   border: 0;
   border-top: 1px solid var(--line);
@@ -120,6 +134,10 @@ hr {
   overflow: auto;
 }
 
+.hidden {
+  display: none;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -135,6 +153,10 @@ td {
 
 @media (max-width: 760px) {
   .grid.two {
+    grid-template-columns: 1fr;
+  }
+
+  .grid.three {
     grid-template-columns: 1fr;
   }
 }

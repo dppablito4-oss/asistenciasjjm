@@ -11,6 +11,7 @@
       <section class="card">
         <h1>IE Asistencia</h1>
         <p class="muted">Panel web conectado a Supabase</p>
+        <p id="auth-badge" class="muted">No autenticado</p>
 
         <div class="grid two">
           <label>
@@ -47,6 +48,74 @@
         </div>
 
         <p id="status" class="status">Listo.</p>
+      </section>
+
+      <section id="admin-panel" class="card hidden">
+        <h2>Admin</h2>
+        <p class="muted">Configura horarios como una agenda diaria de institucion.</p>
+
+        <h3>Horario general</h3>
+        <div class="grid three">
+          <label>
+            Hora entrada
+            <input id="global-entry-time" type="time" value="08:00" />
+          </label>
+          <label>
+            Tolerancia (min)
+            <input id="global-tolerance" type="number" min="0" value="10" />
+          </label>
+          <label>
+            
+            <button id="btn-save-global" type="button">Guardar horario general</button>
+          </label>
+        </div>
+
+        <hr />
+
+        <h3>Excepcion por fecha</h3>
+        <div class="grid two">
+          <label>
+            Fecha especial
+            <input id="override-date" type="date" />
+          </label>
+          <label>
+            Motivo
+            <input id="override-reason" type="text" placeholder="Dia de la Madre / Desfile" />
+          </label>
+        </div>
+        <div class="grid three">
+          <label>
+            Hora entrada especial
+            <input id="override-entry-time" type="time" value="09:00" />
+          </label>
+          <label>
+            Tolerancia (min)
+            <input id="override-tolerance" type="number" min="0" value="15" />
+          </label>
+          <label>
+            
+            <button id="btn-save-override" type="button">Guardar excepcion</button>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btn-refresh-overrides" class="ghost" type="button">Actualizar lista</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Entrada</th>
+                <th>Tolerancia</th>
+                <th>Motivo</th>
+                <th>Accion</th>
+              </tr>
+            </thead>
+            <tbody id="override-body"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="card">
