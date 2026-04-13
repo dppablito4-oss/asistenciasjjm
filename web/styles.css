@@ -696,6 +696,10 @@ tr.is-selected {
 }
 
 @media (max-width: 760px) {
+  body {
+    overflow-x: hidden;
+  }
+
   .login-panel {
     min-height: auto;
     justify-content: flex-start;
@@ -732,7 +736,36 @@ tr.is-selected {
   }
 
   .nav-btn {
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+    padding: 8px 10px;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .app-account {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    right: auto;
+    justify-self: end;
+    margin-bottom: 2px;
+    z-index: 21;
+  }
+
+  .top-user-trigger {
+    min-height: 40px;
+    max-width: 100%;
   }
 
   .top-user-email {
@@ -747,6 +780,7 @@ tr.is-selected {
   .card {
     padding: 12px;
     border-radius: 10px;
+    overflow: hidden;
   }
 
   .stat-card p {
@@ -775,8 +809,28 @@ tr.is-selected {
     font-size: 16px;
   }
 
+  label {
+    gap: 5px;
+    font-size: 0.9rem;
+  }
+
+  .module-block .grid > label > button:only-child {
+    margin-top: 0;
+  }
+
   .row {
     gap: 6px;
+  }
+
+  .calendar-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .calendar-head strong {
+    grid-column: 1 / -1;
+    text-align: center;
   }
 
   .module-block {
@@ -793,6 +847,10 @@ tr.is-selected {
 }
 
 @media (max-width: 420px) {
+  .sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .shell-main {
     padding: 10px;
   }
@@ -807,6 +865,10 @@ tr.is-selected {
 
   .hero-center h1 {
     font-size: 1.25rem;
+  }
+
+  .top-user-email {
+    max-width: 110px;
   }
 
   .calendar-grid {

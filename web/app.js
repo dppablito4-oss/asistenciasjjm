@@ -1260,6 +1260,13 @@ async function saveStudent() {
   const { data, error } = await supabase.rpc("upsert_student_admin", payload);
   if (error) {
     const msg = String(error.message || "");
+    if (msg.toLowerCase().includes("gen_random_bytes")) {
+      setStatus(
+        "Falta aplicar el hotfix SQL de QR token (gen_random_bytes). Ejecuta la migracion 0016_hotfix_generate_qr_token_search_path.sql y vuelve a intentar.",
+        false
+      );
+      return;
+    }
     if (msg.toLowerCase().includes("seccion no activa") || msg.toLowerCase().includes("no registrada en catalogo")) {
       setStatus(
         "No se pudo guardar: la seccion no esta activa en el catalogo. Ve a Configuracion > Catalogo de secciones y activa/crea esa combinacion (grado-seccion).",
