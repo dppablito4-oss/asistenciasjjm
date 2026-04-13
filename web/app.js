@@ -1436,8 +1436,16 @@ async function regenerateStudentQr(studentId) {
     setStatus(`Error regenerando QR: ${error.message}`, false);
     return;
   }
-  setStatus("QR regenerado correctamente.");
   await loadStudentsAdmin();
+
+  const updated = studentsCache.find((s) => s.id === studentId);
+  if (!updated) {
+    setStatus("QR regenerado correctamente.");
+    return;
+  }
+
+  const dataUrl = await studentQrDataUrl(updated);
+  await saveQrForStudent(updated, dataUrl, { fromRegenerate: true });
 }
 
 function getSelectedStudent() {
@@ -1620,6 +1628,58 @@ function downloadDataUrl(dataUrl, filename) {
   a.remove();
 }
 
+async function saveDataUrlWithPicker(dataUrl, filename) {
+  if (typeof window.showSaveFilePicker !== "function") {
+    return { method: "download" };
+  }
+
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: filename,
+      types: [
+        {
+          description: "Imagen PNG",
+          accept: { "image/png": [".png"] },
+        },
+      ],
+    });
+
+    const writable = await handle.createWritable();
+    const blob = await (await fetch(dataUrl)).blob();
+    await writable.write(blob);
+    await writable.close();
+    return { method: "picker", filename: handle.name || filename };
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      return { method: "cancelled" };
+    }
+    return { method: "download" };
+  }
+}
+
+async function saveQrForStudent(student, dataUrl, options = {}) {
+  const fileName = `qr_${student.dni}_${todayIsoDate()}.png`;
+  const result = await saveDataUrlWithPicker(dataUrl, fileName);
+
+  if (result.method === "picker") {
+    setStatus(`QR guardado como ${result.filename}.`);
+    return true;
+  }
+
+  if (result.method === "cancelled") {
+    if (options.fromRegenerate) {
+      setStatus("QR regenerado, pero cancelaste la ventana de guardado.", false);
+    } else {
+      setStatus("Guardado cancelado por el usuario.", false);
+    }
+    return false;
+  }
+
+  downloadDataUrl(dataUrl, fileName);
+  setStatus("QR descargado en la carpeta Descargas de tu navegador.");
+  return true;
+}
+
 async function downloadSelectedQr() {
   if (!requireAdmin()) {
     return;
@@ -1630,8 +1690,7 @@ async function downloadSelectedQr() {
     return;
   }
   const dataUrl = await studentQrDataUrl(student);
-  downloadDataUrl(dataUrl, `qr_${student.dni}.png`);
-  setStatus("QR descargado.");
+  await saveQrForStudent(student, dataUrl);
 }
 
 async function printSelectedCard() {

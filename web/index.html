@@ -305,8 +305,7 @@
             <h3>Identidad institucional</h3>
             <div class="module-block">
               <h3 class="block-title">Branding fijo</h3>
-              <p class="muted">La portada e insignia se cargan desde <strong>web/assets</strong> y desde la configuracion de entorno en <strong>web/config.js</strong>.</p>
-              <p class="muted">En este modo de una sola institucion no se usa subida de imagenes desde el panel.</p>
+              <p class="muted">Identidad institucional activa.</p>
             </div>
 
             <hr />
@@ -315,7 +314,7 @@
             <div class="grid three">
               <label>Hora entrada<input id="global-entry-time" type="time" value="08:00" /></label>
               <label>Tolerancia (min)<input id="global-tolerance" type="number" min="0" value="10" /></label>
-              <label><button id="btn-save-global" type="button">Guardar horario general</button></label>
+              <label class="action-cell"><button id="btn-save-global" type="button">Guardar horario general</button></label>
             </div>
 
             <hr />
@@ -337,7 +336,7 @@
             <div class="grid three">
               <label>Hora entrada especial<input id="override-entry-time" type="time" value="09:00" /></label>
               <label>Tolerancia (min)<input id="override-tolerance" type="number" min="0" value="15" /></label>
-              <label><button id="btn-save-override" type="button">Guardar excepcion</button></label>
+              <label class="action-cell"><button id="btn-save-override" type="button">Guardar excepcion</button></label>
             </div>
             <div class="actions-row"><button id="btn-refresh-overrides" class="ghost" type="button">Actualizar lista</button></div>
             <div class="table-wrap">
@@ -354,7 +353,7 @@
               <label>Grado<input id="sec-grado" type="number" min="1" max="5" value="1" /></label>
               <label>Seccion<input id="sec-seccion" type="text" value="A" /></label>
               <label>Activa<select id="sec-activo"><option value="1">Si</option><option value="0">No</option></select></label>
-              <label><button id="btn-save-section" type="button">Guardar seccion</button></label>
+              <label class="action-cell"><button id="btn-save-section" type="button">Guardar seccion</button></label>
             </div>
             <div class="actions-row"><button id="btn-refresh-sections" class="ghost" type="button">Actualizar secciones</button></div>
             <div class="table-wrap">
@@ -373,7 +372,7 @@
                 <label>Docente
                   <select id="assign-teacher"></select>
                 </label>
-                <label>
+                <label class="action-cell">
                   <button id="btn-refresh-assign" class="ghost" type="button">Actualizar docentes/alumnos</button>
                 </label>
               </div>

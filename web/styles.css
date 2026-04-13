@@ -430,6 +430,24 @@ label {
   margin-top: auto;
 }
 
+#config-view .grid > .action-cell {
+  justify-content: flex-end;
+}
+
+#config-view .grid > .action-cell > button {
+  min-height: 42px;
+  margin-top: 0;
+}
+
+#config-view .actions-row {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+#config-view .actions-row > button {
+  width: min(420px, 100%);
+}
+
 input,
 select {
   width: 100%;
@@ -816,6 +834,14 @@ tr.is-selected {
 
   .module-block .grid > label > button:only-child {
     margin-top: 0;
+  }
+
+  #config-view .grid > .action-cell {
+    justify-content: stretch;
+  }
+
+  #config-view .actions-row > button {
+    width: 100%;
   }
 
   .row {
