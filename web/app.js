@@ -49,6 +49,7 @@ let scannerInstance = null;
 let scannerRunning = false;
 let lastScanAt = 0;
 let lastScannedText = "";
+let qrCenterLogoDataUrlCache = null;
 let calendarMonthDate = new Date();
 let overrideDateSet = new Set();
 let docentesCache = [];
@@ -426,6 +427,7 @@ async function normalizeBrandingImage(file, kind) {
 }
 
 function applyBrandingToUi() {
+  qrCenterLogoDataUrlCache = null;
   const schoolName = branding.schoolName || "IE Asistencia";
   const place = branding.placeLabel || "Huanuco";
 
@@ -1447,11 +1449,92 @@ function getSelectedStudent() {
 
 async function studentQrDataUrl(student) {
   const payload = JSON.stringify({ t: student.qr_token || "" });
-  return QRCode.toDataURL(payload, {
+  const qrBaseDataUrl = await QRCode.toDataURL(payload, {
     width: 420,
     margin: 1,
     errorCorrectionLevel: "H",
   });
+
+  const centerLogo = await getQrCenterLogoDataUrl();
+  if (!centerLogo) {
+    return qrBaseDataUrl;
+  }
+
+  try {
+    return await mergeQrWithCenterLogo(qrBaseDataUrl, centerLogo);
+  } catch {
+    return qrBaseDataUrl;
+  }
+}
+
+async function getQrCenterLogoDataUrl() {
+  if (qrCenterLogoDataUrlCache) {
+    return qrCenterLogoDataUrlCache;
+  }
+
+  const insigniaUrl = safeImageUrl(branding.insigniaUrl);
+  if (!insigniaUrl) {
+    return null;
+  }
+
+  const dataUrl = await urlToDataUrl(insigniaUrl);
+  if (!dataUrl) {
+    return null;
+  }
+
+  qrCenterLogoDataUrlCache = dataUrl;
+  return dataUrl;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("No se pudo cargar imagen."));
+    img.src = src;
+  });
+}
+
+async function mergeQrWithCenterLogo(qrDataUrl, logoDataUrl) {
+  const [qrImg, logoImg] = await Promise.all([loadImage(qrDataUrl), loadImage(logoDataUrl)]);
+  const size = Math.max(qrImg.naturalWidth || qrImg.width || 420, qrImg.naturalHeight || qrImg.height || 420);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("No se pudo crear contexto de canvas.");
+  }
+
+  ctx.drawImage(qrImg, 0, 0, size, size);
+
+  const logoSize = Math.round(size * 0.22);
+  const pad = Math.round(size * 0.02);
+  const boxSize = logoSize + pad * 2;
+  const boxX = Math.round((size - boxSize) / 2);
+  const boxY = Math.round((size - boxSize) / 2);
+  const radius = Math.round(boxSize * 0.16);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(boxX + radius, boxY);
+  ctx.lineTo(boxX + boxSize - radius, boxY);
+  ctx.quadraticCurveTo(boxX + boxSize, boxY, boxX + boxSize, boxY + radius);
+  ctx.lineTo(boxX + boxSize, boxY + boxSize - radius);
+  ctx.quadraticCurveTo(boxX + boxSize, boxY + boxSize, boxX + boxSize - radius, boxY + boxSize);
+  ctx.lineTo(boxX + radius, boxY + boxSize);
+  ctx.quadraticCurveTo(boxX, boxY + boxSize, boxX, boxY + boxSize - radius);
+  ctx.lineTo(boxX, boxY + radius);
+  ctx.quadraticCurveTo(boxX, boxY, boxX + radius, boxY);
+  ctx.closePath();
+  ctx.fill();
+
+  const logoX = Math.round((size - logoSize) / 2);
+  const logoY = Math.round((size - logoSize) / 2);
+  ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+
+  return canvas.toDataURL("image/png");
 }
 
 async function startScanner() {
