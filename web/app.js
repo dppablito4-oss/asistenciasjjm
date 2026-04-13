@@ -1259,6 +1259,14 @@ async function saveStudent() {
 
   const { data, error } = await supabase.rpc("upsert_student_admin", payload);
   if (error) {
+    const msg = String(error.message || "");
+    if (msg.toLowerCase().includes("seccion no activa") || msg.toLowerCase().includes("no registrada en catalogo")) {
+      setStatus(
+        "No se pudo guardar: la seccion no esta activa en el catalogo. Ve a Configuracion > Catalogo de secciones y activa/crea esa combinacion (grado-seccion).",
+        false
+      );
+      return;
+    }
     setStatus(`Error guardando alumno: ${error.message}`, false);
     return;
   }

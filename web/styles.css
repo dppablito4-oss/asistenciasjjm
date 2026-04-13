@@ -273,6 +273,10 @@ body {
   align-items: stretch;
 }
 
+.module-block .actions-row {
+  margin-top: 10px;
+}
+
 .actions-row button {
   width: 100%;
   display: inline-flex;
@@ -384,6 +388,7 @@ h3 {
 .grid {
   display: grid;
   gap: 10px;
+  align-items: stretch;
 }
 
 .grid.two {
@@ -403,6 +408,26 @@ label {
   flex-direction: column;
   gap: 6px;
   font-size: 0.92rem;
+  min-height: 100%;
+}
+
+.module-block .grid {
+  gap: 12px;
+}
+
+.module-block .grid > label {
+  height: 100%;
+}
+
+.module-block .grid > label > input,
+.module-block .grid > label > select,
+.module-block .grid > label > button {
+  min-height: 42px;
+}
+
+.module-block .grid > label > button {
+  width: 100%;
+  margin-top: auto;
 }
 
 input,
