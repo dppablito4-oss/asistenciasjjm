@@ -1,12 +1,12 @@
 :root {
-  --bg: #070b17;
-  --panel: #11192f;
-  --panel-2: #151f38;
-  --line: #293a63;
-  --text: #eef2ff;
-  --muted: #a9b4d9;
-  --accent: #2a86ff;
-  --accent-2: #00b6ff;
+  --bg: #0a0f1a;
+  --panel: #111827;
+  --panel-2: #0f172a;
+  --line: #243247;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
   --ok: #22c55e;
   --bad: #ef4444;
 }
@@ -19,7 +19,8 @@ body {
   margin: 0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: var(--text);
-  background: radial-gradient(circle at 20% 0%, #1a2550 0%, #070b17 45%), var(--bg);
+  background: linear-gradient(180deg, #0a0f1a 0%, #0b1220 100%);
+  min-height: 100vh;
 }
 
 .hidden {
@@ -30,7 +31,7 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 430px 1fr;
-  background: #080d1b;
+  background: #0a0f1a;
 }
 
 .login-panel {
@@ -42,14 +43,36 @@ body {
   justify-content: center;
 }
 
+.login-subtle-credit {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: #7f8da8;
+  line-height: 1.4;
+}
+
+.login-subtle-credit span {
+  color: #aeb9cf;
+}
+
+.login-subtle-credit a {
+  margin-left: 8px;
+  color: #8fb5ff;
+  text-decoration: none;
+}
+
+.login-subtle-credit a:hover {
+  color: #b8d1ff;
+  text-decoration: underline;
+}
+
 .login-badge {
   width: 120px;
   height: 120px;
   border-radius: 50%;
   object-fit: contain;
-  border: 1px solid #36558d;
+  border: 1px solid #334155;
   padding: 8px;
-  background: #0e1833;
+  background: #0f172a;
   margin-bottom: 8px;
 }
 
@@ -57,22 +80,22 @@ body {
   min-height: 100vh;
   background-size: cover;
   background-position: center;
-  background-image: linear-gradient(120deg, #162a61 0%, #0f1f4c 100%);
+  background-image: linear-gradient(120deg, #0f172a 0%, #111827 100%);
 }
 
 .hero {
   min-height: 170px;
-  border-radius: 14px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background-size: cover;
   background-position: center;
-  background-image: linear-gradient(120deg, #162a61 0%, #0f1f4c 100%);
+  background-image: linear-gradient(120deg, #0f172a 0%, #111827 100%);
   overflow: hidden;
 }
 
 .hero-overlay {
   min-height: 170px;
-  background: linear-gradient(90deg, rgba(4, 8, 20, 0.76), rgba(4, 8, 20, 0.36));
+  background: linear-gradient(90deg, rgba(2, 6, 14, 0.8), rgba(2, 6, 14, 0.45));
   display: grid;
   grid-template-columns: 86px 1fr 86px;
   gap: 12px;
@@ -81,11 +104,11 @@ body {
 }
 
 .hero-logo {
-  width: 74px;
-  height: 74px;
-  border-radius: 12px;
-  background: rgba(10, 18, 40, 0.75);
-  border: 1px solid rgba(148, 163, 184, 0.45);
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(71, 85, 105, 0.7);
   object-fit: contain;
   padding: 6px;
 }
@@ -103,11 +126,12 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 230px 1fr;
+  background: #0a0f1a;
 }
 
 .sidebar {
   border-right: 1px solid var(--line);
-  background: linear-gradient(180deg, #0c1328, #0b1224);
+  background: #0f172a;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -122,9 +146,9 @@ body {
 }
 
 .nav-btn {
-  border: 1px solid #1e345f;
+  border: 1px solid #22324a;
   border-radius: 10px;
-  background: #101a33;
+  background: #111827;
   color: var(--text);
   font-weight: 600;
   padding: 10px;
@@ -133,9 +157,9 @@ body {
 }
 
 .nav-btn.is-active {
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  color: #051022;
-  border-color: #2f78ff;
+  background: #1d4ed8;
+  color: #eff6ff;
+  border-color: #1d4ed8;
 }
 
 .shell-main {
@@ -147,7 +171,7 @@ body {
 .topbar {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(180deg, #121b34, #0f1730);
+  background: #111827;
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -165,10 +189,11 @@ body {
 }
 
 .card {
-  background: linear-gradient(180deg, #16203a 0%, #121a31 100%);
+  background: #111827;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 16px;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.22);
 }
 
 .stats-grid {
@@ -179,8 +204,8 @@ body {
 
 .stat-card {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #171f36, #12192d);
+  border-radius: 10px;
+  background: #0f172a;
   padding: 12px;
 }
 
@@ -237,8 +262,15 @@ select {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
-  background: #0e1530;
+  background: #0b1220;
   color: var(--text);
+}
+
+input:focus,
+select:focus {
+  outline: 0;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .row {
@@ -253,14 +285,15 @@ button {
   border: 0;
   border-radius: 10px;
   padding: 10px 14px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  color: #04101c;
+  background: var(--accent);
+  color: #eff6ff;
   font-weight: 700;
   cursor: pointer;
+  min-height: 40px;
 }
 
 button.ghost {
-  background: #1f2a4a;
+  background: #1e293b;
   color: var(--text);
 }
 
@@ -284,7 +317,7 @@ hr {
   margin: 12px 0 0;
   padding: 10px;
   border-radius: 10px;
-  background: #1c2647;
+  background: #0f172a;
 }
 
 .status.ok {
@@ -299,6 +332,7 @@ hr {
 
 .table-wrap {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .qr-reader {
@@ -306,14 +340,14 @@ hr {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: #0d1736;
+  background: #0b1220;
 }
 
 .calendar-wrap {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: #0d1736;
+  background: #0b1220;
   margin-bottom: 10px;
 }
 
@@ -336,12 +370,12 @@ hr {
   padding: 8px 6px;
   text-align: center;
   font-size: 0.88rem;
-  background: #0e1838;
+  background: #0f172a;
 }
 
 .cal-cell.head {
   font-weight: 700;
-  background: #152650;
+  background: #1e293b;
 }
 
 .cal-cell.day {
@@ -357,7 +391,7 @@ hr {
 }
 
 .cal-cell.day.active {
-  background: #1f3a73;
+  background: #1d4ed8;
   border-color: #60a5fa;
 }
 
@@ -391,6 +425,21 @@ tr.is-selected {
     grid-template-columns: 1fr;
   }
 
+  .login-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    min-height: 52vh;
+    padding: 26px 18px;
+  }
+
+  .login-subtle-credit {
+    margin-top: 8px;
+  }
+
+  .login-hero {
+    min-height: 48vh;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
@@ -399,7 +448,35 @@ tr.is-selected {
     border-right: 0;
     border-bottom: 1px solid var(--line);
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: 10px;
+    padding: 10px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-title {
+    display: none;
+  }
+
+  .nav-btn {
+    white-space: nowrap;
+    min-width: max-content;
+    padding: 9px 12px;
+  }
+
+  .shell-main {
+    padding: 12px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 58px;
+    z-index: 15;
   }
 
   .stats-grid {
@@ -408,13 +485,59 @@ tr.is-selected {
 }
 
 @media (max-width: 760px) {
+  .login-panel {
+    min-height: auto;
+    justify-content: flex-start;
+  }
+
+  .login-subtle-credit {
+    font-size: 0.74rem;
+  }
+
+  .login-badge {
+    width: 92px;
+    height: 92px;
+  }
+
+  .login-hero {
+    min-height: 36vh;
+  }
+
   .hero-overlay {
     grid-template-columns: 1fr;
     text-align: center;
+    padding: 12px;
+    min-height: 148px;
   }
 
   .hero-logo {
     margin: 0 auto;
+    width: 56px;
+    height: 56px;
+  }
+
+  .hero-center h1 {
+    font-size: 1.45rem;
+  }
+
+  .topbar {
+    top: 54px;
+    padding: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .top-title {
+    font-size: 1rem;
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .stat-card p {
+    font-size: 1.4rem;
   }
 
   .grid.two,
@@ -425,5 +548,48 @@ tr.is-selected {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  th,
+  td {
+    padding: 7px;
+    font-size: 0.86rem;
+  }
+
+  input,
+  select,
+  button {
+    font-size: 16px;
+  }
+
+  .row {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .shell-main {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 10px;
+  }
+
+  .login-panel {
+    padding: 20px 14px;
+  }
+
+  .hero-center h1 {
+    font-size: 1.25rem;
+  }
+
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .cal-cell {
+    padding: 6px 4px;
+    font-size: 0.8rem;
   }
 }
