@@ -877,7 +877,12 @@ async function lookupStudentDniForLogin(dni) {
 
 function normalizeProvisioningErrorMessage(message) {
   const text = String(message || "").toLowerCase();
-  if (text.includes("already registered") || text.includes("already exists") || text.includes("ya registrado")) {
+  if (
+    text.includes("already registered") ||
+    text.includes("already exists") ||
+    text.includes("ya registrado") ||
+    text.includes("duplicate")
+  ) {
     return "already_exists";
   }
   return "other";
@@ -892,7 +897,7 @@ async function ensureStudentAuthAccount(dni) {
   const email = `${digits}@${AUTH_DNI_DOMAIN}`;
   const tempPassword = digits;
 
-  const { error } = await withRetry(
+  const { data, error } = await withRetry(
     () =>
       supabaseProvisioning.auth.signUp({
         email,
@@ -912,6 +917,12 @@ async function ensureStudentAuthAccount(dni) {
       return { created: false, skipped: true, reason: "already_exists" };
     }
     return { created: false, skipped: false, reason: "error", message: String(error.message || "") };
+  }
+
+  // Supabase puede responder sin error cuando el email ya existe (anti-enumeration).
+  const identities = Array.isArray(data?.user?.identities) ? data.user.identities : null;
+  if (identities && identities.length === 0) {
+    return { created: false, skipped: true, reason: "already_exists" };
   }
 
   return { created: true, skipped: false, reason: "created", email };
