@@ -6,6 +6,7 @@ import autoTable from "https://esm.sh/jspdf-autotable@3.8.2";
 import { ADMIN_EMAILS, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const BRANDING_BUCKET = "branding-assets";
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
@@ -142,6 +143,24 @@ async function urlToDataUrl(url) {
   } catch {
     return null;
   }
+}
+
+async function uploadBrandingAsset(file, kind) {
+  if (!file) {
+    return null;
+  }
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const safeExt = ext.replace(/[^a-z0-9]/g, "") || "png";
+  const uid = currentSession?.user?.id || "public";
+  const filePath = `${uid}/${kind}_${Date.now()}.${safeExt}`;
+  const { error } = await supabase.storage
+    .from(BRANDING_BUCKET)
+    .upload(filePath, file, { upsert: true, contentType: file.type || undefined });
+  if (error) {
+    throw new Error(error.message);
+  }
+  const { data } = supabase.storage.from(BRANDING_BUCKET).getPublicUrl(filePath);
+  return data.publicUrl;
 }
 
 function todayIsoDate() {
@@ -454,6 +473,29 @@ async function saveBrandingSettings() {
   const panoramicUrl = $("brand-panoramic-url").value.trim();
   const insigniaUrl = $("brand-insignia-url").value.trim();
   const mineduLogoUrl = $("brand-minedu-url").value.trim();
+  const panoramicFile = $("brand-panoramic-file").files?.[0] || null;
+  const insigniaFile = $("brand-insignia-file").files?.[0] || null;
+  const mineduFile = $("brand-minedu-file").files?.[0] || null;
+
+  let finalPanoramicUrl = panoramicUrl;
+  let finalInsigniaUrl = insigniaUrl;
+  let finalMineduLogoUrl = mineduLogoUrl;
+
+  try {
+    if (panoramicFile) {
+      finalPanoramicUrl = await uploadBrandingAsset(panoramicFile, "panoramic");
+    }
+    if (insigniaFile) {
+      finalInsigniaUrl = await uploadBrandingAsset(insigniaFile, "insignia");
+    }
+    if (mineduFile) {
+      finalMineduLogoUrl = await uploadBrandingAsset(mineduFile, "minedu");
+    }
+  } catch (err) {
+    setStatus(`Error subiendo imagen institucional: ${String(err.message || err)}`, false);
+    return;
+  }
+
   const { error } = await supabase.rpc("set_branding_settings", {
     p_school_name: schoolName,
     p_place_label: placeLabel,
@@ -464,9 +506,9 @@ async function saveBrandingSettings() {
   }
 
   const { error: assetsError } = await supabase.rpc("set_branding_assets", {
-    p_panoramic_url: panoramicUrl,
-    p_insignia_url: insigniaUrl,
-    p_minedu_logo_url: mineduLogoUrl,
+    p_panoramic_url: finalPanoramicUrl,
+    p_insignia_url: finalInsigniaUrl,
+    p_minedu_logo_url: finalMineduLogoUrl,
   });
   if (assetsError) {
     setStatus(`Error guardando imagenes de identidad: ${assetsError.message}`, false);
@@ -475,9 +517,15 @@ async function saveBrandingSettings() {
 
   branding.schoolName = schoolName || "IE Asistencia";
   branding.placeLabel = placeLabel || "Huanuco";
-  branding.panoramicUrl = panoramicUrl;
-  branding.insigniaUrl = insigniaUrl;
-  branding.mineduLogoUrl = mineduLogoUrl;
+  branding.panoramicUrl = finalPanoramicUrl;
+  branding.insigniaUrl = finalInsigniaUrl;
+  branding.mineduLogoUrl = finalMineduLogoUrl;
+  $("brand-panoramic-url").value = finalPanoramicUrl;
+  $("brand-insignia-url").value = finalInsigniaUrl;
+  $("brand-minedu-url").value = finalMineduLogoUrl;
+  $("brand-panoramic-file").value = "";
+  $("brand-insignia-file").value = "";
+  $("brand-minedu-file").value = "";
   applyBrandingToUi();
   setStatus("Identidad institucional actualizada.");
 }
@@ -1332,16 +1380,17 @@ function exportReportXlsx() {
   setStatus("Reporte XLSX descargado.");
 }
 
-function exportReportPdf() {
+async function exportReportPdf() {
   if (!lastReportRows.length) {
     setStatus("Primero genera el reporte.", false);
     return;
   }
+
   const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-  doc.setFontSize(12);
-  doc.text(`${branding.schoolName} - Reporte Asistencia`, 36, 24);
-  doc.setFontSize(10);
-  doc.text(`Generado: ${todayIsoDate()} | Sede: ${branding.placeLabel}`, 36, 40);
+  const generatedAt = new Date().toLocaleString("es-PE");
+  const insigniaData = await urlToDataUrl(branding.insigniaUrl);
+  const mineduData = await urlToDataUrl(branding.mineduLogoUrl);
+
   const head = [["Fecha", "Hora", "DNI", "Nombres", "Apellidos", "Grado", "Sec", "Genero", "Cargo", "Profesor", "Estado"]];
   const body = lastReportRows.map((r) => [
     r.fecha || "",
@@ -1356,36 +1405,61 @@ function exportReportPdf() {
     r.profesor_encargado || "",
     r.estado || "",
   ]);
-  Promise.all([urlToDataUrl(branding.insigniaUrl), urlToDataUrl(branding.mineduLogoUrl)])
-    .then(([insigniaData, mineduData]) => {
+  autoTable(doc, {
+    head,
+    body,
+    startY: 68,
+    theme: "grid",
+    styles: { fontSize: 8, cellPadding: 4, lineColor: [215, 222, 240], lineWidth: 0.5 },
+    headStyles: { fillColor: [20, 52, 116], textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [247, 250, 255] },
+    columnStyles: {
+      0: { cellWidth: 62 },
+      1: { cellWidth: 52 },
+      2: { cellWidth: 58 },
+      3: { cellWidth: 76 },
+      4: { cellWidth: 86 },
+      5: { cellWidth: 44 },
+      6: { cellWidth: 34 },
+      7: { cellWidth: 42 },
+      8: { cellWidth: 72 },
+      9: { cellWidth: 86 },
+      10: { cellWidth: 60 },
+    },
+    margin: { left: 24, right: 24, top: 68, bottom: 28 },
+    didDrawPage: (data) => {
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+
+      doc.setFillColor(20, 52, 116);
+      doc.rect(0, 0, pageW, 52, "F");
+
       if (insigniaData) {
-        doc.addImage(insigniaData, "PNG", 740, 10, 34, 34);
+        doc.addImage(insigniaData, "PNG", 24, 9, 34, 34);
       }
       if (mineduData) {
-        doc.addImage(mineduData, "PNG", 790, 10, 34, 34);
+        doc.addImage(mineduData, "PNG", pageW - 58, 9, 34, 34);
       }
-      autoTable(doc, {
-        head,
-        body,
-        startY: 52,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [24, 58, 126] },
-        alternateRowStyles: { fillColor: [245, 248, 255] },
-      });
-      doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
-      setStatus("Reporte PDF descargado.");
-    })
-    .catch(() => {
-      autoTable(doc, {
-        head,
-        body,
-        startY: 52,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [24, 58, 126] },
-      });
-      doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
-      setStatus("Reporte PDF descargado (sin logos por CORS de imagen).");
-    });
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.text(`${branding.schoolName} - REPORTE DE ASISTENCIA`, pageW / 2, 22, { align: "center" });
+      doc.setFontSize(9);
+      doc.text(`Sede: ${branding.placeLabel} | Generado: ${generatedAt}`, pageW / 2, 38, { align: "center" });
+
+      doc.setTextColor(80, 92, 120);
+      doc.setFontSize(8);
+      doc.text(`Pagina ${data.pageNumber}`, pageW - 24, pageH - 12, { align: "right" });
+      doc.text("Sistema IE Asistencia", 24, pageH - 12);
+    },
+  });
+
+  doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
+  if (!insigniaData && !mineduData) {
+    setStatus("Reporte PDF descargado (sin logos: revisa CORS de imagen o usa subida interna).", true);
+    return;
+  }
+  setStatus("Reporte PDF descargado.");
 }
 
 async function bootstrapAuth() {
