@@ -361,6 +361,35 @@
                 <tbody id="sections-body"></tbody>
               </table>
             </div>
+
+            <hr />
+
+            <h3>Asignacion docente-alumnos</h3>
+            <div class="module-block">
+              <h3 class="block-title">Docente objetivo</h3>
+              <div class="grid two">
+                <label>Docente
+                  <select id="assign-teacher"></select>
+                </label>
+                <label>
+                  <button id="btn-refresh-assign" class="ghost" type="button">Actualizar docentes/alumnos</button>
+                </label>
+              </div>
+              <p id="assign-summary" class="muted">Selecciona un docente para gestionar sus alumnos.</p>
+            </div>
+
+            <div class="module-block table-block">
+              <h3 class="block-title">Alumnos asignables</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th></th><th>DNI</th><th>Alumno</th><th>Grado</th><th>Estado</th></tr></thead>
+                  <tbody id="assign-students-body"></tbody>
+                </table>
+              </div>
+              <div class="actions-row">
+                <button id="btn-save-assign" type="button">Guardar asignaciones</button>
+              </div>
+            </div>
           </section>
         </section>
       </section>

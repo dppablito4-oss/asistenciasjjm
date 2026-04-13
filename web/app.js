@@ -50,6 +50,10 @@ let lastScanAt = 0;
 let lastScannedText = "";
 let calendarMonthDate = new Date();
 let overrideDateSet = new Set();
+let docentesCache = [];
+let assignableStudentsCache = [];
+let selectedDocenteUserId = "";
+let currentAssignmentIds = new Set();
 let currentUserProfile = {
   role: null,
   mustChangePassword: false,
@@ -88,9 +92,13 @@ function closeTopUserMenu() {
 
 function applyModuleVisibilityByRole() {
   const admin = isAdmin();
+  const student = isStudent();
   navButtons.forEach((btn) => {
     const isAdminOnly = btn.dataset.admin === "1";
     btn.classList.toggle("hidden", isAdminOnly && !admin);
+    if (btn.dataset.view === "asistencia-view") {
+      btn.textContent = student ? "Mi asistencia" : "Asistencia";
+    }
   });
   moduleViews.forEach((view) => {
     const isAdminOnly = view.dataset.adminView === "1";
@@ -177,12 +185,30 @@ function setAuthBadge() {
 function updateUiByAuth() {
   setAuthBadge();
   setTopbarUser();
+  const canMark = isLoggedIn() && canTakeAttendance() && !currentUserProfile.mustChangePassword;
+  const markActions = $("attendance-actions");
+  const teacherWrap = $("attendance-teacher-wrap");
+  const tokenWrap = $("attendance-token-wrap");
+
   $("btn-mark").disabled = !isLoggedIn() || !canTakeAttendance() || currentUserProfile.mustChangePassword;
   $("btn-refresh").disabled = !isLoggedIn();
   $("btn-start-scan").disabled = !isLoggedIn() || !canTakeAttendance() || currentUserProfile.mustChangePassword;
   $("btn-stop-scan").disabled = !isLoggedIn() || !canTakeAttendance();
   $("teacher").disabled = !isLoggedIn() || !canTakeAttendance();
   $("qr-token").disabled = !isLoggedIn() || !canTakeAttendance();
+  if (markActions) {
+    markActions.classList.toggle("hidden", !canMark);
+  }
+  if (teacherWrap) {
+    teacherWrap.classList.toggle("hidden", !canMark);
+  }
+  if (tokenWrap) {
+    tokenWrap.classList.toggle("hidden", !canMark);
+  }
+  if (!canMark) {
+    stopScanner();
+    setScanStatus("Modo solo lectura de asistencia.");
+  }
   $("admin-panel").classList.toggle("hidden", !isAdmin());
   applyModuleVisibilityByRole();
 }
@@ -619,6 +645,7 @@ async function signIn() {
   await loadTodayAttendance();
   if (isAdmin()) {
     await loadSectionsAdmin();
+    await loadAssignmentAdminData();
     await loadGlobalSchedule();
     await loadOverrides();
     await loadStudentsAdmin();
@@ -902,6 +929,143 @@ async function toggleSection(grado, seccion, activo) {
   }
   setStatus("Estado de seccion actualizado.");
   await loadSectionsAdmin();
+}
+
+function renderDocentesSelect() {
+  const select = $("assign-teacher");
+  if (!select) {
+    return;
+  }
+  select.innerHTML = "";
+
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = docentesCache.length ? "Selecciona docente" : "Sin docentes";
+  select.appendChild(empty);
+
+  for (const d of docentesCache) {
+    const opt = document.createElement("option");
+    opt.value = d.user_id;
+    const label = `${d.display_name || d.email || d.dni || "Docente"} ${d.dni ? `(${d.dni})` : ""}`.trim();
+    opt.textContent = d.is_active ? label : `${label} [INACTIVO]`;
+    select.appendChild(opt);
+  }
+
+  if (selectedDocenteUserId) {
+    select.value = selectedDocenteUserId;
+  }
+}
+
+function renderAssignStudentsTable() {
+  const body = $("assign-students-body");
+  if (!body) {
+    return;
+  }
+  body.innerHTML = "";
+  for (const s of assignableStudentsCache) {
+    const tr = document.createElement("tr");
+    const checked = currentAssignmentIds.has(s.estudiante_id) ? "checked" : "";
+    const checkboxId = `assign-st-${s.estudiante_id}`;
+    tr.innerHTML = `
+      <td><input id="${checkboxId}" type="checkbox" ${checked} /></td>
+      <td>${s.dni || ""}</td>
+      <td>${s.apellidos || ""}, ${s.nombres || ""}</td>
+      <td>${s.grado || ""}${s.seccion || ""}</td>
+      <td>${s.status || ""}</td>
+    `;
+    body.appendChild(tr);
+    tr.querySelector(`#${checkboxId}`)?.addEventListener("change", (ev) => {
+      if (ev.target.checked) {
+        currentAssignmentIds.add(s.estudiante_id);
+      } else {
+        currentAssignmentIds.delete(s.estudiante_id);
+      }
+    });
+  }
+}
+
+async function loadSelectedDocenteAssignments() {
+  const summary = $("assign-summary");
+  const select = $("assign-teacher");
+  if (!summary || !select) {
+    return;
+  }
+  selectedDocenteUserId = select.value || "";
+  currentAssignmentIds = new Set();
+
+  if (!selectedDocenteUserId) {
+    summary.textContent = "Selecciona un docente para gestionar sus alumnos.";
+    renderAssignStudentsTable();
+    return;
+  }
+
+  const { data, error } = await supabase.rpc("list_docente_assignment_ids_admin", {
+    p_docente_user_id: selectedDocenteUserId,
+  });
+  if (error) {
+    setStatus(`Error cargando asignaciones: ${error.message}`, false);
+    return;
+  }
+
+  currentAssignmentIds = new Set((data || []).map((r) => r.estudiante_id));
+  const docente = docentesCache.find((d) => d.user_id === selectedDocenteUserId);
+  summary.textContent = `Docente: ${docente?.display_name || docente?.email || "-"} | Asignados: ${currentAssignmentIds.size}`;
+  renderAssignStudentsTable();
+}
+
+async function loadAssignmentAdminData() {
+  if (!requireAdmin()) {
+    return;
+  }
+
+  const [{ data: docentesData, error: docentesErr }, { data: studentsData, error: studentsErr }] = await Promise.all([
+    supabase.rpc("list_docentes_admin"),
+    supabase.rpc("list_assignable_students_admin"),
+  ]);
+
+  if (docentesErr) {
+    setStatus(`Error cargando docentes: ${docentesErr.message}`, false);
+    return;
+  }
+  if (studentsErr) {
+    setStatus(`Error cargando alumnos asignables: ${studentsErr.message}`, false);
+    return;
+  }
+
+  docentesCache = docentesData || [];
+  assignableStudentsCache = studentsData || [];
+
+  if (!selectedDocenteUserId && docentesCache.length) {
+    selectedDocenteUserId = docentesCache[0].user_id;
+  }
+
+  renderDocentesSelect();
+  await loadSelectedDocenteAssignments();
+}
+
+async function saveDocenteAssignments() {
+  if (!requireAdmin()) {
+    return;
+  }
+
+  const docenteId = $("assign-teacher")?.value || "";
+  if (!docenteId) {
+    setStatus("Selecciona un docente para guardar asignaciones.", false);
+    return;
+  }
+
+  const studentIds = Array.from(currentAssignmentIds);
+  const { error } = await supabase.rpc("assign_docente_estudiantes", {
+    p_docente_user_id: docenteId,
+    p_estudiante_ids: studentIds,
+  });
+  if (error) {
+    setStatus(`Error guardando asignaciones: ${error.message}`, false);
+    return;
+  }
+
+  setStatus("Asignaciones guardadas correctamente.");
+  await loadSelectedDocenteAssignments();
 }
 
 async function saveOverride() {
@@ -1719,6 +1883,7 @@ async function bootstrapAuth() {
       await loadGlobalSchedule();
       await loadOverrides();
       await loadSectionsAdmin();
+      await loadAssignmentAdminData();
       await loadStudentsAdmin();
       const t = todayIsoDate();
       $("rp-ref-date").value = t;
@@ -1767,6 +1932,9 @@ $("btn-cal-next").addEventListener("click", () => {
 $("override-date").addEventListener("change", renderOverrideCalendar);
 $("btn-save-section").addEventListener("click", saveSection);
 $("btn-refresh-sections").addEventListener("click", loadSectionsAdmin);
+$("btn-refresh-assign").addEventListener("click", loadAssignmentAdminData);
+$("btn-save-assign").addEventListener("click", saveDocenteAssignments);
+$("assign-teacher").addEventListener("change", loadSelectedDocenteAssignments);
 $("btn-refresh-students").addEventListener("click", loadStudentsAdmin);
 $("btn-save-student").addEventListener("click", saveStudent);
 $("btn-clear-student").addEventListener("click", clearStudentForm);
