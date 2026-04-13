@@ -270,14 +270,44 @@ function canTakeAttendance() {
   return isAdmin() || isTeacher();
 }
 
-function setAuthBadge() {
+function getDefaultRegistrarName() {
+  const fromMeta = String(
+    currentSession?.user?.user_metadata?.display_name || currentSession?.user?.user_metadata?.full_name || ""
+  ).trim();
+  if (fromMeta) {
+    return fromMeta;
+  }
+
+  const email = String(currentSession?.user?.email || "").trim();
+  if (!email) {
+    return "";
+  }
+  const alias = email.split("@")[0] || email;
+  return isAdmin() ? `Admin ${alias}` : alias;
+}
+
+function setLoginFeedback(text, ok = false) {
   const badge = $("auth-badge");
+  if (!badge) {
+    return;
+  }
+  badge.textContent = text;
+  badge.classList.remove("ok", "bad", "feedback-pop", "feedback-shake");
+  if (text && text !== "No autenticado") {
+    badge.classList.add(ok ? "ok" : "bad");
+    // Restart animation each time the feedback message changes.
+    void badge.offsetWidth;
+    badge.classList.add(ok ? "feedback-pop" : "feedback-shake");
+  }
+}
+
+function setAuthBadge() {
   if (!isLoggedIn()) {
-    badge.textContent = "No autenticado";
+    setLoginFeedback("No autenticado", false);
     return;
   }
   const role = isAdmin() ? "Admin TIC" : isTeacher() ? "Docente" : isStudent() ? "Alumno" : "Operador";
-  badge.textContent = `Sesion: ${currentSession.user.email} (${role})`;
+  setLoginFeedback(`Sesion: ${currentSession.user.email} (${role})`, true);
 }
 
 function updateUiByAuth() {
@@ -294,6 +324,12 @@ function updateUiByAuth() {
   $("btn-stop-scan").disabled = !isLoggedIn() || !canTakeAttendance();
   $("teacher").disabled = !isLoggedIn() || !canTakeAttendance();
   $("qr-token").disabled = !isLoggedIn() || !canTakeAttendance();
+  if (canMark && !$("teacher").value.trim()) {
+    const defaultRegistrar = getDefaultRegistrarName();
+    if (defaultRegistrar) {
+      $("teacher").value = defaultRegistrar;
+    }
+  }
   if (markActions) {
     markActions.classList.toggle("hidden", !canMark);
   }
@@ -882,6 +918,7 @@ async function signIn() {
   const email = normalizeLoginIdentifier(rawLoginInput);
   const password = $("password").value;
   if (!email || !password) {
+    setLoginFeedback("Completa usuario y clave.", false);
     setStatus("Completa usuario y clave.", false);
     return;
   }
@@ -896,18 +933,22 @@ async function signIn() {
     if (isInvalidCredentials && isDniLogin) {
       const lookup = await lookupStudentDniForLogin(digits);
       if (lookup.known && lookup.exists) {
+        setLoginFeedback("Contrasena incorrecta. Intenta nuevamente.", false);
         setStatus("Contrasena incorrecta. Intenta nuevamente o restablece la clave.", false);
         return;
       }
       if (lookup.known && !lookup.exists) {
+        setLoginFeedback("No tenemos registro de ese DNI.", false);
         setStatus("No tenemos registro de ese DNI en la base de datos.", false);
         return;
       }
 
+      setLoginFeedback("DNI o contrasena incorrectos.", false);
       setStatus(`Acceso denegado para ${digits}. Verifica usuario o clave.`, false);
       return;
     }
 
+    setLoginFeedback("Usuario o contrasena incorrectos.", false);
     setStatus(`Login fallido: ${error.message}`, false);
     return;
   }
@@ -968,11 +1009,21 @@ async function markAttendance() {
     return;
   }
   const token = $("qr-token").value.trim();
-  const teacher = $("teacher").value.trim();
+  const teacherInput = $("teacher").value.trim();
+  const teacher = teacherInput || getDefaultRegistrarName();
 
-  if (!token || !teacher) {
-    setStatus("Ingresa token/DNI y profesor.", false);
+  if (!token) {
+    setStatus("Ingresa token o DNI.", false);
     return;
+  }
+
+  if (!teacher) {
+    setStatus("No se pudo determinar el registrador actual.", false);
+    return;
+  }
+
+  if (!teacherInput) {
+    $("teacher").value = teacher;
   }
 
   const { data, error } = await rpcWithRetry(
@@ -2670,6 +2721,34 @@ $("btn-export-report-pdf").addEventListener("click", exportReportPdf);
 $("btn-start-scan").addEventListener("click", startScanner);
 $("btn-stop-scan").addEventListener("click", stopScanner);
 $("btn-change-password").addEventListener("click", changeInitialPassword);
+
+$("email").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    signIn();
+  }
+});
+
+$("password").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    signIn();
+  }
+});
+
+$("teacher").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    markAttendance();
+  }
+});
+
+$("qr-token").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    markAttendance();
+  }
+});
 
 const topUserTrigger = $("top-user-trigger");
 if (topUserTrigger) {

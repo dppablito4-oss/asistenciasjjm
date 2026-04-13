@@ -491,6 +491,75 @@ h3 {
   margin: 0 0 12px;
 }
 
+#auth-badge {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 0;
+  border: 1px solid transparent;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+#auth-badge.ok {
+  color: #c8f7dd;
+  background: rgba(24, 59, 46, 0.42);
+  border-color: rgba(61, 140, 109, 0.78);
+  padding: 6px 11px;
+}
+
+#auth-badge.ok::before {
+  content: "✓";
+  font-weight: 800;
+  color: #c8f7dd;
+}
+
+#auth-badge.bad {
+  color: #ffd0d8;
+  background: rgba(75, 26, 39, 0.44);
+  border-color: rgba(159, 66, 90, 0.8);
+  padding: 6px 11px;
+}
+
+#auth-badge.bad::before {
+  content: "!";
+  font-weight: 800;
+  color: #ffd0d8;
+}
+
+#auth-badge.feedback-pop {
+  animation: authBadgePop 0.24s ease-out;
+}
+
+#auth-badge.feedback-shake {
+  animation: authBadgeShake 0.3s ease-out;
+}
+
+@keyframes authBadgePop {
+  0% {
+    transform: translateY(4px);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes authBadgeShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
 .grid {
   display: grid;
   gap: 10px;
