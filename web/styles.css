@@ -1,16 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@500;700;800&display=swap");
 
 :root {
-  --bg: #0a0f1a;
-  --panel: #111827;
-  --panel-2: #0f172a;
-  --line: #243247;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --accent: #2563eb;
-  --accent-2: #1d4ed8;
-  --ok: #22c55e;
-  --bad: #ef4444;
+  --bg: #111315;
+  --panel: #191c20;
+  --panel-2: #16191d;
+  --line: #2b3138;
+  --text: #eceff3;
+  --muted: #a4acb8;
+  --accent: #2f6f61;
+  --accent-2: #265a4f;
+  --ok: #2fb67b;
+  --bad: #de5a5a;
 }
 
 * {
@@ -21,7 +21,7 @@ body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
   color: var(--text);
-  background: linear-gradient(180deg, #0a0f1a 0%, #0b1220 100%);
+  background: radial-gradient(circle at 20% 0%, #1b2026 0%, #111315 56%, #0f1113 100%);
   min-height: 100vh;
 }
 
@@ -33,7 +33,7 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 430px 1fr;
-  background: #0a0f1a;
+  background: #111315;
 }
 
 .login-panel {
@@ -48,22 +48,22 @@ body {
 .login-subtle-credit {
   margin: 10px 0 0;
   font-size: 0.78rem;
-  color: #7f8da8;
+  color: #8b95a2;
   line-height: 1.4;
 }
 
 .login-subtle-credit span {
-  color: #aeb9cf;
+  color: #c3cad4;
 }
 
 .login-subtle-credit a {
   margin-left: 8px;
-  color: #8fb5ff;
+  color: #99cbc0;
   text-decoration: none;
 }
 
 .login-subtle-credit a:hover {
-  color: #b8d1ff;
+  color: #b8dfd7;
   text-decoration: underline;
 }
 
@@ -72,9 +72,9 @@ body {
   height: 112px;
   border-radius: 50%;
   object-fit: contain;
-  border: 1px solid #3a4b67;
+  border: 1px solid #3b424c;
   padding: 8px;
-  background: radial-gradient(circle at 30% 20%, #1d2f55, #0f172a 65%);
+  background: radial-gradient(circle at 30% 20%, #2a313b, #16191d 65%);
   margin-bottom: 6px;
 }
 
@@ -82,7 +82,7 @@ body {
   min-height: 100vh;
   background-size: cover;
   background-position: center;
-  background-image: linear-gradient(120deg, #0f172a 0%, #111827 100%);
+  background-image: linear-gradient(120deg, #1a1f25 0%, #14181c 100%);
 }
 
 .hero {
@@ -91,7 +91,7 @@ body {
   border: 1px solid var(--line);
   background-size: cover;
   background-position: center;
-  background-image: linear-gradient(120deg, #0f172a 0%, #111827 100%);
+  background-image: linear-gradient(120deg, #1a1f25 0%, #14181c 100%);
   overflow: hidden;
 }
 
@@ -109,8 +109,8 @@ body {
   width: 68px;
   height: 68px;
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(71, 85, 105, 0.7);
+  background: rgba(24, 28, 33, 0.92);
+  border: 1px solid rgba(83, 91, 102, 0.75);
   object-fit: contain;
   padding: 6px;
 }
@@ -130,12 +130,12 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 230px 1fr;
-  background: #0a0f1a;
+  background: #111315;
 }
 
 .sidebar {
   border-right: 1px solid var(--line);
-  background: #0f172a;
+  background: #16191d;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -151,9 +151,9 @@ body {
 }
 
 .nav-btn {
-  border: 1px solid #22324a;
+  border: 1px solid #303741;
   border-radius: 10px;
-  background: #111827;
+  background: #1a1e24;
   color: var(--text);
   font-weight: 700;
   padding: 9px 10px;
@@ -167,7 +167,7 @@ body {
 
 .nav-btn:hover {
   transform: translateY(-1px);
-  border-color: #2f4668;
+  border-color: #44505e;
 }
 
 .nav-icon {
@@ -175,9 +175,9 @@ body {
   min-width: 44px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid #314869;
-  background: #0f1a2d;
-  color: #cfe0ff;
+  border: 1px solid #3d4653;
+  background: #161b21;
+  color: #d0d8e3;
   font-size: 0.72rem;
   display: inline-flex;
   align-items: center;
@@ -190,15 +190,15 @@ body {
 }
 
 .nav-btn.is-active {
-  background: #1d4ed8;
-  color: #eff6ff;
-  border-color: #1d4ed8;
+  background: #2a5a50;
+  color: #f0faf7;
+  border-color: #2f6f61;
 }
 
 .nav-btn.is-active .nav-icon {
-  border-color: #c9dcff;
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
+  border-color: #cbe7df;
+  background: rgba(240, 250, 247, 0.14);
+  color: #f6fffc;
 }
 
 .shell-main {
@@ -210,7 +210,7 @@ body {
 .topbar {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #111827;
+  background: #191c20;
   padding: 12px 14px;
   display: flex;
   align-items: center;
@@ -229,7 +229,7 @@ body {
 }
 
 .card {
-  background: #111827;
+  background: #191c20;
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 16px;
@@ -245,7 +245,7 @@ body {
 .stat-card {
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #0f172a;
+  background: #171b20;
   padding: 12px;
 }
 
@@ -303,15 +303,15 @@ select {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px;
-  background: #0b1220;
+  background: #14181d;
   color: var(--text);
 }
 
 input:focus,
 select:focus {
   outline: 0;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: #3e8d7c;
+  box-shadow: 0 0 0 2px rgba(47, 111, 97, 0.24);
 }
 
 .row {
@@ -334,7 +334,7 @@ button {
 }
 
 button.ghost {
-  background: #1e293b;
+  background: #242a32;
   color: var(--text);
 }
 
@@ -358,7 +358,7 @@ hr {
   margin: 12px 0 0;
   padding: 10px;
   border-radius: 10px;
-  background: #0f172a;
+  background: #171b20;
 }
 
 .status.ok {
@@ -381,14 +381,14 @@ hr {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: #0b1220;
+  background: #14181d;
 }
 
 .calendar-wrap {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: #0b1220;
+  background: #14181d;
   margin-bottom: 10px;
 }
 
@@ -406,17 +406,17 @@ hr {
 }
 
 .cal-cell {
-  border: 1px solid #2a3558;
+  border: 1px solid #39414b;
   border-radius: 8px;
   padding: 8px 6px;
   text-align: center;
   font-size: 0.88rem;
-  background: #0f172a;
+  background: #171b20;
 }
 
 .cal-cell.head {
   font-weight: 700;
-  background: #1e293b;
+  background: #242a32;
 }
 
 .cal-cell.day {
@@ -424,16 +424,16 @@ hr {
 }
 
 .cal-cell.day:hover {
-  border-color: #38bdf8;
+  border-color: #4f9f8e;
 }
 
 .cal-cell.day.today {
-  outline: 1px solid #22d3ee;
+  outline: 1px solid #66bba9;
 }
 
 .cal-cell.day.active {
-  background: #1d4ed8;
-  border-color: #60a5fa;
+  background: #2a5a50;
+  border-color: #65a595;
 }
 
 .cal-cell.day.has-override {
@@ -458,7 +458,7 @@ td {
 }
 
 tr.is-selected {
-  background: #1b2c54;
+  background: #243239;
 }
 
 @media (max-width: 980px) {

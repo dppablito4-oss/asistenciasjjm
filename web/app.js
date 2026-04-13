@@ -268,8 +268,8 @@ function applyBrandingToUi() {
   const hero = $("brand-hero");
   const pano = safeImageUrl(branding.panoramicUrl);
   hero.style.backgroundImage = pano
-    ? `linear-gradient(120deg, rgba(16, 42, 92, 0.66), rgba(9, 21, 54, 0.44)), url('${pano.replace(/'/g, "%27")}')`
-    : "linear-gradient(120deg, #162a61 0%, #0f1f4c 100%)";
+    ? `linear-gradient(118deg, rgba(22, 25, 30, 0.68), rgba(12, 14, 16, 0.5)), url('${pano.replace(/'/g, "%27")}')`
+    : "linear-gradient(120deg, #1b1f24 0%, #14171b 100%)";
 
   const insignia = $("hero-insignia");
   const insUrl = safeImageUrl(branding.insigniaUrl);
