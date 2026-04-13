@@ -45,7 +45,12 @@
         <div class="row">
           <button id="btn-mark">Marcar asistencia</button>
           <button id="btn-refresh" class="ghost">Actualizar hoy</button>
+          <button id="btn-start-scan" class="ghost">Iniciar escaner QR</button>
+          <button id="btn-stop-scan" class="ghost">Detener escaner</button>
         </div>
+
+        <p id="scan-status" class="muted">Escaner detenido.</p>
+        <div id="qr-reader" class="qr-reader hidden"></div>
 
         <p id="status" class="status">Listo.</p>
       </section>
@@ -53,6 +58,24 @@
       <section id="admin-panel" class="card hidden">
         <h2>Admin</h2>
         <p class="muted">Configura horarios como una agenda diaria de institucion.</p>
+
+        <h3>Identidad institucional</h3>
+        <div class="grid three">
+          <label>
+            Nombre institucion
+            <input id="brand-school-name" type="text" placeholder="IE Asistencia" />
+          </label>
+          <label>
+            Lugar (pie de carnet/reporte)
+            <input id="brand-place-label" type="text" placeholder="Huanuco" />
+          </label>
+          <label>
+            
+            <button id="btn-save-branding" type="button">Guardar identidad</button>
+          </label>
+        </div>
+
+        <hr />
 
         <h3>Horario general</h3>
         <div class="grid three">
@@ -198,7 +221,19 @@
           <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
           <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
           <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
+          <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
           <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Importar alumnos (CSV/XLSX)
+            <input id="students-file" type="file" accept=".csv,.xlsx,.xls" />
+          </label>
+          <label>
+            
+            <button id="btn-import-students" class="ghost" type="button">Importar archivo</button>
+          </label>
         </div>
 
         <div class="table-wrap">
@@ -215,6 +250,110 @@
               </tr>
             </thead>
             <tbody id="students-admin-body"></tbody>
+          </table>
+        </div>
+
+        <hr />
+
+        <h3>Centro de reportes</h3>
+        <p class="muted">Filtros por periodo, grado, seccion, genero, cargo y estado con exportacion.</p>
+
+        <div class="grid four">
+          <label>
+            Periodo
+            <select id="rp-period">
+              <option value="day">Dia</option>
+              <option value="week">Semana</option>
+              <option value="month">Mes</option>
+              <option value="range">Rango</option>
+            </select>
+          </label>
+          <label>
+            Fecha referencia
+            <input id="rp-ref-date" type="date" />
+          </label>
+          <label>
+            Inicio
+            <input id="rp-start-date" type="date" />
+          </label>
+          <label>
+            Fin
+            <input id="rp-end-date" type="date" />
+          </label>
+        </div>
+
+        <div class="grid four">
+          <label>
+            Grado
+            <select id="rp-grado">
+              <option value="">Todos</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+          <label>
+            Seccion
+            <input id="rp-seccion" type="text" placeholder="A / B / C" />
+          </label>
+          <label>
+            Genero
+            <select id="rp-genero">
+              <option value="">Todos</option>
+              <option value="F">F</option>
+              <option value="M">M</option>
+            </select>
+          </label>
+          <label>
+            Cargo
+            <input id="rp-cargo" type="text" placeholder="Alumno / Brigadier" />
+          </label>
+        </div>
+
+        <div class="grid three">
+          <label>
+            Condicion
+            <select id="rp-condition">
+              <option value="all">Todos</option>
+              <option value="present">Asistieron</option>
+              <option value="absent">Faltaron</option>
+            </select>
+          </label>
+          <label>
+            
+            <button id="btn-run-report" type="button">Generar reporte</button>
+          </label>
+          <label>
+            
+            <button id="btn-export-report-csv" class="ghost" type="button">Exportar CSV</button>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="btn-export-report-xlsx" class="ghost" type="button">Exportar XLSX</button>
+          <button id="btn-export-report-pdf" class="ghost" type="button">Exportar PDF</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>DNI</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>Grado</th>
+                <th>Seccion</th>
+                <th>Genero</th>
+                <th>Cargo</th>
+                <th>Profesor</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="report-body"></tbody>
           </table>
         </div>
       </section>
@@ -240,6 +379,7 @@
       </section>
     </main>
 
+    <script src="https://unpkg.com/html5-qrcode" defer></script>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

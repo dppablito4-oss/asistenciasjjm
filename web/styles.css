@@ -147,6 +147,14 @@ hr {
   overflow: auto;
 }
 
+.qr-reader {
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #0d1736;
+}
+
 .hidden {
   display: none;
 }
