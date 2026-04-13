@@ -263,6 +263,84 @@ function setScanStatus(text) {
   scanStatusEl.textContent = text;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableSupabaseError(error) {
+  const status = Number(error?.status || 0);
+  if ([408, 429, 500, 502, 503, 504].includes(status)) {
+    return true;
+  }
+  const msg = String(error?.message || "").toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("network") ||
+    msg.includes("timeout") ||
+    msg.includes("gateway") ||
+    msg.includes("temporarily")
+  );
+}
+
+async function withRetry(operation, options = {}) {
+  const retries = Number(options.retries ?? 2);
+  const baseDelayMs = Number(options.baseDelayMs ?? 350);
+  const label = String(options.label || "operacion");
+
+  let lastResult = null;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const result = await operation();
+    lastResult = result;
+    if (!result?.error) {
+      return result;
+    }
+    if (attempt >= retries || !isRetryableSupabaseError(result.error)) {
+      return result;
+    }
+
+    const delay = baseDelayMs * (2 ** attempt);
+    setStatus(`Conexion inestable, reintentando ${label}...`, false);
+    await sleep(delay);
+  }
+
+  return lastResult;
+}
+
+async function rpcWithRetry(fnName, params = {}, options = {}) {
+  return await withRetry(() => supabase.rpc(fnName, params), {
+    retries: options.retries ?? 2,
+    baseDelayMs: options.baseDelayMs ?? 350,
+    label: options.label || fnName,
+  });
+}
+
+async function runSupabaseHealthcheck(context = "sesion") {
+  setStatus("Verificando conexion con Supabase...", true);
+  const endpoint = `${SUPABASE_URL}/auth/v1/settings`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+      },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    setStatus("Conexion estable con Supabase.", true);
+    return true;
+  } catch {
+    setStatus(`Conexion inestable con Supabase durante ${context}.`, false);
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function safeImageUrl(url) {
   const value = String(url || "").trim();
   return value || "";
@@ -295,7 +373,7 @@ async function loadMyProfile() {
     currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
     return;
   }
-  const { data, error } = await supabase.rpc("get_my_profile");
+  const { data, error } = await rpcWithRetry("get_my_profile", {}, { label: "perfil", retries: 2 });
   if (error) {
     setStatus(`No se pudo cargar perfil: ${error.message}`, false);
     currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
@@ -331,7 +409,7 @@ async function changeInitialPassword() {
     return;
   }
 
-  const { error: markError } = await supabase.rpc("complete_initial_password_change");
+  const { error: markError } = await rpcWithRetry("complete_initial_password_change", {}, { label: "cambio de clave", retries: 2 });
   if (markError) {
     setPasswordGateVisible(true, `Clave actualizada, pero no se pudo cerrar primer acceso: ${markError.message}`);
     return;
@@ -656,6 +734,7 @@ async function signIn() {
   }
   const auth = await supabase.auth.getSession();
   currentSession = auth.data.session;
+  await runSupabaseHealthcheck("inicio de sesion");
   await loadMyProfile();
   showAppShell();
   updateUiByAuth();
@@ -716,10 +795,14 @@ async function markAttendance() {
     return;
   }
 
-  const { data, error } = await supabase.rpc("mark_attendance", {
-    p_identifier: token,
-    p_teacher: teacher,
-  });
+  const { data, error } = await rpcWithRetry(
+    "mark_attendance",
+    {
+      p_identifier: token,
+      p_teacher: teacher,
+    },
+    { label: "registro de asistencia", retries: 2 }
+  );
 
   if (error) {
     setStatus(`Error marcando: ${error.message}`, false);
@@ -832,10 +915,14 @@ async function saveGlobalSchedule() {
     return;
   }
 
-  const { error } = await supabase.rpc("set_attendance_schedule", {
-    p_entry_time: entry,
-    p_tolerance_min: tolerance,
-  });
+  const { error } = await rpcWithRetry(
+    "set_attendance_schedule",
+    {
+      p_entry_time: entry,
+      p_tolerance_min: tolerance,
+    },
+    { label: "horario general", retries: 2 }
+  );
 
   if (error) {
     setStatus(`Error guardando horario: ${error.message}`, false);
@@ -926,11 +1013,15 @@ async function saveSection() {
     setStatus("Completa grado y seccion.", false);
     return;
   }
-  const { error } = await supabase.rpc("upsert_section_admin", {
-    p_grado: grado,
-    p_seccion: seccion,
-    p_activo: activo,
-  });
+  const { error } = await rpcWithRetry(
+    "upsert_section_admin",
+    {
+      p_grado: grado,
+      p_seccion: seccion,
+      p_activo: activo,
+    },
+    { label: "catalogo de secciones", retries: 2 }
+  );
   if (error) {
     setStatus(`Error guardando seccion: ${error.message}`, false);
     return;
@@ -1275,7 +1366,7 @@ async function saveStudent() {
     return;
   }
 
-  const { data, error } = await supabase.rpc("upsert_student_admin", payload);
+  const { data, error } = await rpcWithRetry("upsert_student_admin", payload, { label: "guardado de alumno", retries: 2 });
   if (error) {
     const msg = String(error.message || "");
     if (msg.toLowerCase().includes("gen_random_bytes")) {
@@ -1406,7 +1497,10 @@ async function importStudentsFile() {
       p_status_note: String(normalized.status_note || "").trim(),
     };
 
-    const { error } = await supabase.rpc("upsert_student_admin", payload);
+    const { error } = await rpcWithRetry("upsert_student_admin", payload, {
+      label: "importacion de alumnos",
+      retries: 2,
+    });
     if (error) {
       fail += 1;
       lastImportErrors.push({
@@ -1889,15 +1983,19 @@ async function runAttendanceReport() {
     const endDate = $("rp-end-date").value;
     const bounds = periodBounds(period, refDate, startDate, endDate);
 
-    const { data, error } = await supabase.rpc("report_attendance_filtered", {
-      p_start_date: bounds.start,
-      p_end_date: bounds.end,
-      p_grado: $("rp-grado").value ? Number($("rp-grado").value) : null,
-      p_seccion: $("rp-seccion").value.trim() || null,
-      p_genero: $("rp-genero").value || null,
-      p_cargo: $("rp-cargo").value.trim() || null,
-      p_condition: $("rp-condition").value,
-    });
+    const { data, error } = await rpcWithRetry(
+      "report_attendance_filtered",
+      {
+        p_start_date: bounds.start,
+        p_end_date: bounds.end,
+        p_grado: $("rp-grado").value ? Number($("rp-grado").value) : null,
+        p_seccion: $("rp-seccion").value.trim() || null,
+        p_genero: $("rp-genero").value || null,
+        p_cargo: $("rp-cargo").value.trim() || null,
+        p_condition: $("rp-condition").value,
+      },
+      { label: "reporte de asistencia", retries: 2 }
+    );
 
     if (error) {
       setStatus(`Error generando reporte: ${error.message}`, false);
@@ -1906,18 +2004,22 @@ async function runAttendanceReport() {
     lastReportRows = data || [];
     renderReportTable();
 
-    await supabase.rpc("save_report_history_web", {
-      p_period: period,
-      p_condition: $("rp-condition").value,
-      p_ref_date: refDate || null,
-      p_start_date: bounds.start,
-      p_end_date: bounds.end,
-      p_grado: $("rp-grado").value || null,
-      p_seccion: $("rp-seccion").value.trim() || null,
-      p_genero: $("rp-genero").value || null,
-      p_cargo: $("rp-cargo").value.trim() || null,
-      p_row_count: lastReportRows.length,
-    });
+    await rpcWithRetry(
+      "save_report_history_web",
+      {
+        p_period: period,
+        p_condition: $("rp-condition").value,
+        p_ref_date: refDate || null,
+        p_start_date: bounds.start,
+        p_end_date: bounds.end,
+        p_grado: $("rp-grado").value || null,
+        p_seccion: $("rp-seccion").value.trim() || null,
+        p_genero: $("rp-genero").value || null,
+        p_cargo: $("rp-cargo").value.trim() || null,
+        p_row_count: lastReportRows.length,
+      },
+      { label: "historial de reportes", retries: 2 }
+    );
 
     setStatus(`Reporte generado con ${lastReportRows.length} filas.`);
   } catch (err) {
@@ -2043,6 +2145,7 @@ async function bootstrapAuth() {
   const auth = await supabase.auth.getSession();
   currentSession = auth.data.session;
   if (isLoggedIn()) {
+    await runSupabaseHealthcheck("restauracion de sesion");
     showAppShell();
     await loadMyProfile();
   } else {
