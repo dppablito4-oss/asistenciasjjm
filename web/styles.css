@@ -59,6 +59,10 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -67,6 +71,15 @@ label {
 }
 
 input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: #0e1530;
+  color: var(--text);
+}
+
+select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -151,12 +164,20 @@ td {
   white-space: nowrap;
 }
 
+tr.is-selected {
+  background: #1b2c54;
+}
+
 @media (max-width: 760px) {
   .grid.two {
     grid-template-columns: 1fr;
   }
 
   .grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .grid.four {
     grid-template-columns: 1fr;
   }
 }
