@@ -24,6 +24,8 @@ let scannerInstance = null;
 let scannerRunning = false;
 let lastScanAt = 0;
 let lastScannedText = "";
+let calendarMonthDate = new Date();
+let overrideDateSet = new Set();
 
 function isAdminEmail(email) {
   const e = String(email || "").trim().toLowerCase();
@@ -83,6 +85,76 @@ function setScanStatus(text) {
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatMonthLabel(d) {
+  return d.toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+}
+
+function renderOverrideCalendar() {
+  const grid = $("override-calendar");
+  const title = $("calendar-title");
+  if (!grid || !title) {
+    return;
+  }
+
+  const current = new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth(), 1);
+  title.textContent = formatMonthLabel(current).toUpperCase();
+
+  const selected = $("override-date").value;
+  const today = todayIsoDate();
+  const weekdayHeads = ["L", "M", "M", "J", "V", "S", "D"];
+
+  grid.innerHTML = "";
+  for (const name of weekdayHeads) {
+    const h = document.createElement("div");
+    h.className = "cal-cell head";
+    h.textContent = name;
+    grid.appendChild(h);
+  }
+
+  const firstWeekday = (current.getDay() + 6) % 7;
+  const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+  const prevMonthDays = new Date(current.getFullYear(), current.getMonth(), 0).getDate();
+
+  for (let i = 0; i < 42; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell day";
+
+    let dayNum = 0;
+    let cellDate = null;
+    if (i < firstWeekday) {
+      dayNum = prevMonthDays - firstWeekday + i + 1;
+      cell.classList.add("dim");
+      cellDate = new Date(current.getFullYear(), current.getMonth() - 1, dayNum);
+    } else if (i >= firstWeekday + daysInMonth) {
+      dayNum = i - (firstWeekday + daysInMonth) + 1;
+      cell.classList.add("dim");
+      cellDate = new Date(current.getFullYear(), current.getMonth() + 1, dayNum);
+    } else {
+      dayNum = i - firstWeekday + 1;
+      cellDate = new Date(current.getFullYear(), current.getMonth(), dayNum);
+    }
+
+    const iso = toIsoDate(cellDate);
+    cell.textContent = String(dayNum);
+    if (iso === today) {
+      cell.classList.add("today");
+    }
+    if (iso === selected) {
+      cell.classList.add("active");
+    }
+    if (overrideDateSet.has(iso)) {
+      cell.classList.add("has-override");
+      cell.title = "Tiene horario especial";
+    }
+
+    cell.addEventListener("click", () => {
+      $("override-date").value = iso;
+      renderOverrideCalendar();
+    });
+    grid.appendChild(cell);
+  }
 }
 
 function toIsoDate(d) {
@@ -334,6 +406,7 @@ async function loadOverrides() {
   }
 
   overrideBody.innerHTML = "";
+  overrideDateSet = new Set((data || []).map((r) => String(r.day)));
   for (const row of data || []) {
     const tr = document.createElement("tr");
     const btnId = `del-${String(row.day).replaceAll("-", "")}`;
@@ -349,6 +422,7 @@ async function loadOverrides() {
       await deleteOverride(row.day);
     });
   }
+  renderOverrideCalendar();
 }
 
 async function saveOverride() {
@@ -1019,6 +1093,7 @@ async function bootstrapAuth() {
   } else {
     setStatus("Inicia sesion para usar asistencia y admin.", false);
   }
+  renderOverrideCalendar();
 }
 
 $("btn-login").addEventListener("click", signIn);
@@ -1028,6 +1103,15 @@ $("btn-refresh").addEventListener("click", loadTodayAttendance);
 $("btn-save-global").addEventListener("click", saveGlobalSchedule);
 $("btn-save-override").addEventListener("click", saveOverride);
 $("btn-refresh-overrides").addEventListener("click", loadOverrides);
+$("btn-cal-prev").addEventListener("click", () => {
+  calendarMonthDate = new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth() - 1, 1);
+  renderOverrideCalendar();
+});
+$("btn-cal-next").addEventListener("click", () => {
+  calendarMonthDate = new Date(calendarMonthDate.getFullYear(), calendarMonthDate.getMonth() + 1, 1);
+  renderOverrideCalendar();
+});
+$("override-date").addEventListener("change", renderOverrideCalendar);
 $("btn-save-branding").addEventListener("click", saveBrandingSettings);
 $("btn-refresh-students").addEventListener("click", loadStudentsAdmin);
 $("btn-save-student").addEventListener("click", saveStudent);

@@ -155,6 +155,66 @@ hr {
   background: #0d1736;
 }
 
+.calendar-wrap {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #0d1736;
+  margin-bottom: 10px;
+}
+
+.calendar-head {
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cal-cell {
+  border: 1px solid #2a3558;
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 0.88rem;
+  background: #0e1838;
+}
+
+.cal-cell.head {
+  font-weight: 700;
+  background: #152650;
+}
+
+.cal-cell.day {
+  cursor: pointer;
+}
+
+.cal-cell.day:hover {
+  border-color: #38bdf8;
+}
+
+.cal-cell.day.today {
+  outline: 1px solid #22d3ee;
+}
+
+.cal-cell.day.active {
+  background: #1f3a73;
+  border-color: #60a5fa;
+}
+
+.cal-cell.day.has-override {
+  box-shadow: inset 0 0 0 2px #f59e0b;
+}
+
+.cal-cell.dim {
+  opacity: 0.45;
+}
+
 .hidden {
   display: none;
 }
