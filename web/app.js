@@ -49,6 +49,7 @@ let scannerInstance = null;
 let scannerRunning = false;
 let lastScanAt = 0;
 let lastScannedText = "";
+let globalStatusTimer = null;
 let qrCenterLogoDataUrlCache = null;
 let calendarMonthDate = new Date();
 let overrideDateSet = new Set();
@@ -238,8 +239,23 @@ function setStatus(text, ok = true) {
 
   if (globalStatusEl) {
     globalStatusEl.textContent = text;
-    globalStatusEl.classList.remove("hidden", "ok", "bad");
+    globalStatusEl.classList.remove("hidden", "ok", "bad", "show");
     globalStatusEl.classList.add(ok ? "ok" : "bad");
+
+    if (globalStatusTimer) {
+      clearTimeout(globalStatusTimer);
+    }
+
+    requestAnimationFrame(() => {
+      globalStatusEl.classList.add("show");
+    });
+
+    globalStatusTimer = setTimeout(() => {
+      globalStatusEl.classList.remove("show");
+      setTimeout(() => {
+        globalStatusEl.classList.add("hidden");
+      }, 220);
+    }, 3000);
   }
 }
 

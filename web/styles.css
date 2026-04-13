@@ -207,29 +207,52 @@ body {
   padding: 14px;
   display: grid;
   gap: 14px;
+  align-content: start;
 }
 
 .app-account {
   position: fixed;
   top: 14px;
   right: 14px;
-  z-index: 45;
+  z-index: 95;
 }
 
 .global-status {
-  margin: 4px 0 0;
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  z-index: 90;
+  width: min(560px, calc(100vw - 24px));
   border: 1px solid #2e466f;
   background: rgba(20, 35, 58, 0.88);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
   color: #d7e6ff;
   font-size: 0.92rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 12px 26px rgba(2, 7, 20, 0.34);
+}
+
+.global-status.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.global-status.ok {
+  border-color: #2f5d8d;
 }
 
 .global-status.bad {
   border-color: #6c2f3a;
   background: rgba(63, 20, 28, 0.86);
   color: #ffdbe1;
+}
+
+.shell-hero {
+  margin-top: 54px;
 }
 
 .top-user-menu {
@@ -731,8 +754,12 @@ tr.is-selected {
   }
 
   .app-account {
-    top: 64px;
+    top: 10px;
     right: 10px;
+  }
+
+  .shell-hero {
+    margin-top: 56px;
   }
 
   .stats-grid {
@@ -809,12 +836,14 @@ tr.is-selected {
   }
 
   .app-account {
-    position: sticky;
+    position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 8px);
-    right: auto;
-    justify-self: end;
-    margin-bottom: 2px;
-    z-index: 21;
+    right: 8px;
+    z-index: 95;
+  }
+
+  .shell-hero {
+    margin-top: 56px;
   }
 
   .top-user-trigger {
