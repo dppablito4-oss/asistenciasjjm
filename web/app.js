@@ -417,6 +417,7 @@ async function withRetry(operation, options = {}) {
   const retries = Number(options.retries ?? 2);
   const baseDelayMs = Number(options.baseDelayMs ?? 350);
   const label = String(options.label || "operacion");
+  const notify = options.notify !== false;
 
   let lastResult = null;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -430,7 +431,9 @@ async function withRetry(operation, options = {}) {
     }
 
     const delay = baseDelayMs * (2 ** attempt);
-    setStatus(`Conexion inestable, reintentando ${label}...`, false);
+    if (notify) {
+      setStatus(`Conexion inestable, reintentando ${label}...`, false);
+    }
     await sleep(delay);
   }
 
@@ -899,6 +902,7 @@ async function ensureStudentAuthAccount(dni) {
       label: "creacion de cuenta de acceso",
       retries: 1,
       baseDelayMs: 300,
+      notify: false,
     }
   );
 
@@ -911,6 +915,41 @@ async function ensureStudentAuthAccount(dni) {
   }
 
   return { created: true, skipped: false, reason: "created", email };
+}
+
+async function provisionAuthAccountsInBatches(dnis = []) {
+  const uniqueDnis = Array.from(new Set((dnis || []).map((d) => String(d || "").replace(/\D/g, "")).filter((d) => d.length === 8)));
+  if (!uniqueDnis.length) {
+    return { created: 0, existing: 0, failed: 0 };
+  }
+
+  const batchSize = 25;
+  const pauseMs = 450;
+  let created = 0;
+  let existing = 0;
+  let failed = 0;
+
+  for (let i = 0; i < uniqueDnis.length; i += batchSize) {
+    const chunk = uniqueDnis.slice(i, i + batchSize);
+    setStatus(`Creando usuarios de acceso en bloque ${Math.floor(i / batchSize) + 1}/${Math.ceil(uniqueDnis.length / batchSize)}...`, true);
+
+    for (const dni of chunk) {
+      const provision = await ensureStudentAuthAccount(dni);
+      if (provision.created) {
+        created += 1;
+      } else if (provision.reason === "already_exists") {
+        existing += 1;
+      } else {
+        failed += 1;
+      }
+    }
+
+    if (i + batchSize < uniqueDnis.length) {
+      await sleep(pauseMs);
+    }
+  }
+
+  return { created, existing, failed };
 }
 
 async function signIn() {
@@ -1799,6 +1838,7 @@ async function importStudentsFile() {
   }
 
   const indexByDni = new Map(studentsCache.map((s) => [String(s.dni), s]));
+  const createAuthDuringImport = !!$("import-create-auth")?.checked;
   const activeSections = new Set(
     sectionsCache
       .filter((s) => s.activo)
@@ -1810,9 +1850,14 @@ async function importStudentsFile() {
   let authCreated = 0;
   let authExisting = 0;
   let authFailed = 0;
+  const dnisToProvision = [];
   lastImportErrors = [];
 
   for (let i = 0; i < rows.length; i++) {
+    if (i % 50 === 0) {
+      setStatus(`Importando alumnos... ${i}/${rows.length}`, true);
+    }
+
     const row = rows[i];
     const rowNum = i + 2;
     const normalized = {};
@@ -1896,20 +1941,29 @@ async function importStudentsFile() {
       });
     } else {
       ok += 1;
-      const provision = await ensureStudentAuthAccount(dni);
-      if (provision.created) {
-        authCreated += 1;
-      } else if (provision.reason === "already_exists") {
-        authExisting += 1;
-      } else {
-        authFailed += 1;
+      if (createAuthDuringImport) {
+        dnisToProvision.push(dni);
       }
     }
   }
 
+  if (createAuthDuringImport && dnisToProvision.length) {
+    const provisionStats = await provisionAuthAccountsInBatches(dnisToProvision);
+    authCreated = provisionStats.created;
+    authExisting = provisionStats.existing;
+    authFailed = provisionStats.failed;
+  }
+
   await loadStudentsAdmin();
-  $("import-summary").textContent = `Resultado importacion: OK ${ok} | Fallidos ${fail} | Usuarios creados ${authCreated} | Usuarios existentes ${authExisting} | Usuarios con error ${authFailed}`;
-  setStatus(`Importacion finalizada. OK: ${ok}, Fallidos: ${fail}, Usuarios creados: ${authCreated}.`, fail === 0 && authFailed === 0);
+  $("import-summary").textContent = createAuthDuringImport
+    ? `Resultado importacion: OK ${ok} | Fallidos ${fail} | Usuarios creados ${authCreated} | Usuarios existentes ${authExisting} | Usuarios con error ${authFailed}`
+    : `Resultado importacion: OK ${ok} | Fallidos ${fail} | Usuarios de acceso omitidos (activa la opcion para crearlos)`;
+  setStatus(
+    createAuthDuringImport
+      ? `Importacion finalizada. OK: ${ok}, Fallidos: ${fail}, Usuarios creados: ${authCreated}.`
+      : `Importacion finalizada. OK: ${ok}, Fallidos: ${fail}.`,
+    createAuthDuringImport ? fail === 0 && authFailed === 0 : fail === 0
+  );
 }
 
 function exportImportErrorsCsv() {

@@ -275,6 +275,10 @@
                 <label>Importar alumnos (CSV/XLSX)<input id="students-file" type="file" accept=".csv,.xlsx,.xls" /></label>
                 <label><button id="btn-import-students" class="ghost" type="button">Importar archivo</button></label>
               </div>
+              <label>
+                <input id="import-create-auth" type="checkbox" />
+                Crear usuarios de acceso durante importacion (mas lento para archivos grandes)
+              </label>
               <p id="import-summary" class="muted"></p>
               <div class="actions-row">
                 <button id="btn-export-import-errors" class="ghost" type="button">Descargar errores de importacion</button>
