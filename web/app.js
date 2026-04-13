@@ -14,12 +14,21 @@ const overrideBody = $("override-body");
 const studentsAdminBody = $("students-admin-body");
 const reportBody = $("report-body");
 const scanStatusEl = $("scan-status");
+const sectionsBody = $("sections-body");
 
 let currentSession = null;
 let studentsCache = [];
 let selectedStudentId = null;
 let lastReportRows = [];
-let branding = { schoolName: "IE Asistencia", placeLabel: "Huanuco" };
+let branding = {
+  schoolName: "IE Asistencia",
+  placeLabel: "Huanuco",
+  panoramicUrl: "",
+  insigniaUrl: "",
+  mineduLogoUrl: "",
+};
+let sectionsCache = [];
+let lastImportErrors = [];
 let scannerInstance = null;
 let scannerRunning = false;
 let lastScanAt = 0;
@@ -83,6 +92,58 @@ function setScanStatus(text) {
   scanStatusEl.textContent = text;
 }
 
+function safeImageUrl(url) {
+  const value = String(url || "").trim();
+  return value || "";
+}
+
+function applyBrandingToUi() {
+  const schoolName = branding.schoolName || "IE Asistencia";
+  const place = branding.placeLabel || "Huanuco";
+
+  $("brand-title").textContent = schoolName;
+  $("hero-school-name").textContent = schoolName;
+  $("hero-place-label").textContent = `Sede: ${place}`;
+
+  const hero = $("brand-hero");
+  const pano = safeImageUrl(branding.panoramicUrl);
+  hero.style.backgroundImage = pano
+    ? `linear-gradient(120deg, rgba(16, 42, 92, 0.66), rgba(9, 21, 54, 0.44)), url('${pano.replace(/'/g, "%27")}')`
+    : "linear-gradient(120deg, #162a61 0%, #0f1f4c 100%)";
+
+  const insignia = $("hero-insignia");
+  const minedu = $("hero-minedu");
+  const insUrl = safeImageUrl(branding.insigniaUrl);
+  const minUrl = safeImageUrl(branding.mineduLogoUrl);
+
+  insignia.src = insUrl;
+  insignia.style.visibility = insUrl ? "visible" : "hidden";
+
+  minedu.src = minUrl;
+  minedu.style.visibility = minUrl ? "visible" : "hidden";
+}
+
+async function urlToDataUrl(url) {
+  const clean = safeImageUrl(url);
+  if (!clean) {
+    return null;
+  }
+  try {
+    const res = await fetch(clean, { mode: "cors" });
+    if (!res.ok) {
+      return null;
+    }
+    const blob = await res.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -103,7 +164,7 @@ function renderOverrideCalendar() {
 
   const selected = $("override-date").value;
   const today = todayIsoDate();
-  const weekdayHeads = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekdayHeads = ["L", "M", "X", "J", "V", "S", "D"];
 
   grid.innerHTML = "";
   for (const name of weekdayHeads) {
@@ -218,11 +279,17 @@ async function signIn() {
   currentSession = auth.data.session;
   updateUiByAuth();
   setStatus("Login exitoso.");
+  await loadBrandingSettings();
   await loadTodayAttendance();
   if (isAdmin()) {
+    await loadSectionsAdmin();
     await loadGlobalSchedule();
     await loadOverrides();
     await loadStudentsAdmin();
+    const t = todayIsoDate();
+    $("rp-ref-date").value = t;
+    $("rp-start-date").value = t;
+    $("rp-end-date").value = t;
   }
 }
 
@@ -326,14 +393,14 @@ async function loadGlobalSchedule() {
 }
 
 async function loadBrandingSettings() {
-  if (!requireAdmin()) {
+  if (!requireLogin()) {
     return;
   }
 
   const { data, error } = await supabase
     .from("app_settings")
     .select("key,value")
-    .in("key", ["school_name", "place_label"]);
+    .in("key", ["school_name", "place_label", "panoramic_url", "insignia_url", "minedu_logo_url"]);
 
   if (error) {
     setStatus(`Error cargando identidad: ${error.message}`, false);
@@ -343,8 +410,39 @@ async function loadBrandingSettings() {
   const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
   branding.schoolName = map.school_name || "IE Asistencia";
   branding.placeLabel = map.place_label || "Huanuco";
+  branding.panoramicUrl = map.panoramic_url || "";
+  branding.insigniaUrl = map.insignia_url || "";
+  branding.mineduLogoUrl = map.minedu_logo_url || "";
   $("brand-school-name").value = branding.schoolName;
   $("brand-place-label").value = branding.placeLabel;
+  $("brand-panoramic-url").value = branding.panoramicUrl;
+  $("brand-insignia-url").value = branding.insigniaUrl;
+  $("brand-minedu-url").value = branding.mineduLogoUrl;
+  applyBrandingToUi();
+}
+
+function parseBirthDateCell(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (parsed && parsed.y && parsed.m && parsed.d) {
+      const mm = String(parsed.m).padStart(2, "0");
+      const dd = String(parsed.d).padStart(2, "0");
+      return `${parsed.y}-${mm}-${dd}`;
+    }
+    return null;
+  }
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+  const date = new Date(text);
+  if (!Number.isNaN(date.getTime())) {
+    return toIsoDate(date);
+  }
+  return text;
 }
 
 async function saveBrandingSettings() {
@@ -353,6 +451,9 @@ async function saveBrandingSettings() {
   }
   const schoolName = $("brand-school-name").value.trim();
   const placeLabel = $("brand-place-label").value.trim();
+  const panoramicUrl = $("brand-panoramic-url").value.trim();
+  const insigniaUrl = $("brand-insignia-url").value.trim();
+  const mineduLogoUrl = $("brand-minedu-url").value.trim();
   const { error } = await supabase.rpc("set_branding_settings", {
     p_school_name: schoolName,
     p_place_label: placeLabel,
@@ -361,8 +462,23 @@ async function saveBrandingSettings() {
     setStatus(`Error guardando identidad: ${error.message}`, false);
     return;
   }
+
+  const { error: assetsError } = await supabase.rpc("set_branding_assets", {
+    p_panoramic_url: panoramicUrl,
+    p_insignia_url: insigniaUrl,
+    p_minedu_logo_url: mineduLogoUrl,
+  });
+  if (assetsError) {
+    setStatus(`Error guardando imagenes de identidad: ${assetsError.message}`, false);
+    return;
+  }
+
   branding.schoolName = schoolName || "IE Asistencia";
   branding.placeLabel = placeLabel || "Huanuco";
+  branding.panoramicUrl = panoramicUrl;
+  branding.insigniaUrl = insigniaUrl;
+  branding.mineduLogoUrl = mineduLogoUrl;
+  applyBrandingToUi();
   setStatus("Identidad institucional actualizada.");
 }
 
@@ -423,6 +539,83 @@ async function loadOverrides() {
     });
   }
   renderOverrideCalendar();
+}
+
+async function loadSectionsAdmin() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const { data, error } = await supabase
+    .from("v_sections_admin")
+    .select("grado,seccion,activo")
+    .order("grado", { ascending: true })
+    .order("seccion", { ascending: true });
+
+  if (error) {
+    setStatus(`Error cargando secciones: ${error.message}`, false);
+    return;
+  }
+  sectionsCache = data || [];
+  renderSectionsTable();
+}
+
+function renderSectionsTable() {
+  sectionsBody.innerHTML = "";
+  for (const row of sectionsCache) {
+    const tr = document.createElement("tr");
+    const btnId = `sec-toggle-${row.grado}-${row.seccion}`;
+    tr.innerHTML = `
+      <td>${row.grado}</td>
+      <td>${row.seccion}</td>
+      <td>${row.activo ? "ACTIVA" : "INACTIVA"}</td>
+      <td><button id="${btnId}" class="ghost" type="button">${row.activo ? "Desactivar" : "Activar"}</button></td>
+    `;
+    sectionsBody.appendChild(tr);
+    tr.querySelector(`#${btnId}`)?.addEventListener("click", async () => {
+      await toggleSection(row.grado, row.seccion, !row.activo);
+    });
+  }
+}
+
+async function saveSection() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const grado = Number($("sec-grado").value);
+  const seccion = $("sec-seccion").value.trim().toUpperCase();
+  const activo = $("sec-activo").value === "1";
+  if (!grado || !seccion) {
+    setStatus("Completa grado y seccion.", false);
+    return;
+  }
+  const { error } = await supabase.rpc("upsert_section_admin", {
+    p_grado: grado,
+    p_seccion: seccion,
+    p_activo: activo,
+  });
+  if (error) {
+    setStatus(`Error guardando seccion: ${error.message}`, false);
+    return;
+  }
+  setStatus("Seccion guardada.");
+  await loadSectionsAdmin();
+}
+
+async function toggleSection(grado, seccion, activo) {
+  if (!requireAdmin()) {
+    return;
+  }
+  const { error } = await supabase.rpc("set_section_active", {
+    p_grado: grado,
+    p_seccion: seccion,
+    p_activo: activo,
+  });
+  if (error) {
+    setStatus(`Error actualizando seccion: ${error.message}`, false);
+    return;
+  }
+  setStatus("Estado de seccion actualizado.");
+  await loadSectionsAdmin();
 }
 
 async function saveOverride() {
@@ -619,6 +812,10 @@ async function saveStudent() {
 }
 
 async function importStudentsFile() {
+    if (!sectionsCache.length) {
+      await loadSectionsAdmin();
+    }
+
   if (!requireAdmin()) {
     return;
   }
@@ -638,44 +835,120 @@ async function importStudentsFile() {
   }
 
   const indexByDni = new Map(studentsCache.map((s) => [String(s.dni), s]));
+  const activeSections = new Set(
+    sectionsCache
+      .filter((s) => s.activo)
+      .map((s) => `${Number(s.grado)}-${String(s.seccion).toUpperCase()}`)
+  );
+  const seenInFile = new Set();
   let ok = 0;
   let fail = 0;
+  lastImportErrors = [];
 
-  for (const row of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rowNum = i + 2;
     const normalized = {};
     for (const [k, v] of Object.entries(row)) {
       normalized[String(k).trim().toLowerCase()] = v;
     }
     const dni = String(normalized.dni || "").replace(/\D/g, "");
+    const nombres = String(normalized.nombres || "").trim();
+    const apellidos = String(normalized.apellidos || "").trim();
+    const grado = Number(normalized.grado || 0);
+    const seccion = String(normalized.seccion || "").trim().toUpperCase();
+    const genero = String(normalized.genero || "").trim().toUpperCase();
+    const status = String(normalized.status || "ACTIVO").trim().toUpperCase();
+
+    const validationErrors = [];
     if (!dni) {
+      validationErrors.push("DNI vacio");
+    } else if (dni.length !== 8) {
+      validationErrors.push("DNI debe tener 8 digitos");
+    }
+    if (!nombres) {
+      validationErrors.push("Nombres vacio");
+    }
+    if (!apellidos) {
+      validationErrors.push("Apellidos vacio");
+    }
+    if (grado < 1 || grado > 5) {
+      validationErrors.push("Grado invalido (1..5)");
+    }
+    if (!seccion) {
+      validationErrors.push("Seccion vacia");
+    } else if (!activeSections.has(`${grado}-${seccion}`)) {
+      validationErrors.push("Seccion no activa/no registrada en catalogo");
+    }
+    if (!["M", "F"].includes(genero)) {
+      validationErrors.push("Genero invalido (M/F)");
+    }
+    if (!["ACTIVO", "RETIRADO", "TRASLADADO"].includes(status)) {
+      validationErrors.push("Status invalido");
+    }
+    if (dni && seenInFile.has(dni)) {
+      validationErrors.push("DNI duplicado en archivo");
+    }
+    seenInFile.add(dni);
+
+    if (validationErrors.length) {
       fail += 1;
+      lastImportErrors.push({
+        row: rowNum,
+        dni,
+        error: validationErrors.join("; "),
+      });
       continue;
     }
+
     const existing = indexByDni.get(dni);
     const payload = {
       p_id: existing?.id || null,
       p_dni: dni,
-      p_nombres: String(normalized.nombres || "").trim(),
-      p_apellidos: String(normalized.apellidos || "").trim(),
-      p_grado: Number(normalized.grado || 1),
-      p_seccion: String(normalized.seccion || "A").trim().toUpperCase(),
-      p_genero: String(normalized.genero || "F").trim().toUpperCase(),
+      p_nombres: nombres,
+      p_apellidos: apellidos,
+      p_grado: grado,
+      p_seccion: seccion,
+      p_genero: genero,
       p_cargo: String(normalized.cargo || "Alumno").trim(),
-      p_birth_date: normalized.birth_date ? String(normalized.birth_date) : null,
-      p_status: String(normalized.status || "ACTIVO").trim().toUpperCase(),
+      p_birth_date: parseBirthDateCell(normalized.birth_date),
+      p_status: status,
       p_status_note: String(normalized.status_note || "").trim(),
     };
 
     const { error } = await supabase.rpc("upsert_student_admin", payload);
     if (error) {
       fail += 1;
+      lastImportErrors.push({
+        row: rowNum,
+        dni,
+        error: error.message,
+      });
     } else {
       ok += 1;
     }
   }
 
   await loadStudentsAdmin();
+  $("import-summary").textContent = `Resultado importacion: OK ${ok} | Fallidos ${fail}`;
   setStatus(`Importacion finalizada. OK: ${ok}, Fallidos: ${fail}.`, fail === 0);
+}
+
+function exportImportErrorsCsv() {
+  if (!lastImportErrors.length) {
+    setStatus("No hay errores de importacion para exportar.", false);
+    return;
+  }
+  const headers = ["row", "dni", "error"];
+  const lines = [headers.join(",")];
+  for (const r of lastImportErrors) {
+    lines.push([csvEscape(r.row), csvEscape(r.dni), csvEscape(r.error)].join(","));
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  downloadDataUrl(url, `errores_importacion_${todayIsoDate()}.csv`);
+  URL.revokeObjectURL(url);
+  setStatus("CSV de errores descargado.");
 }
 
 async function regenerateStudentQr(studentId) {
@@ -818,6 +1091,10 @@ async function printSelectedCard() {
     return;
   }
 
+  const insignia = safeImageUrl(branding.insigniaUrl);
+  const minedu = safeImageUrl(branding.mineduLogoUrl);
+  const insigniaHtml = insignia ? `<img class="logo" src="${insignia}" alt="insignia" />` : "<div></div>";
+  const mineduHtml = minedu ? `<img class="logo" src="${minedu}" alt="logo" />` : "<div></div>";
   w.document.write(`
     <html>
       <head>
@@ -826,6 +1103,8 @@ async function printSelectedCard() {
           body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px; }
           .card { width: 540px; border: 1px solid #111827; border-radius: 14px; background: white; padding: 16px; }
           .head { font-weight: 700; font-size: 24px; margin-bottom: 10px; }
+          .logos { display: flex; justify-content: space-between; margin-bottom: 8px; }
+          .logo { width: 52px; height: 52px; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; }
           .muted { color: #4b5563; }
           .grid { display: grid; grid-template-columns: 1fr 170px; gap: 14px; align-items: center; }
           .line { margin: 6px 0; }
@@ -834,6 +1113,10 @@ async function printSelectedCard() {
       </head>
       <body>
         <div class="card">
+          <div class="logos">
+            ${insigniaHtml}
+            ${mineduHtml}
+          </div>
           <div class="head">${branding.schoolName}</div>
           <div class="grid">
             <div>
@@ -877,6 +1160,8 @@ async function printBulkCardsPdf() {
   const gapY = 14;
   const marginX = (pageW - (cols * cardW + gapX)) / 2;
   const marginY = 22;
+  const insigniaData = await urlToDataUrl(branding.insigniaUrl);
+  const mineduData = await urlToDataUrl(branding.mineduLogoUrl);
 
   for (let i = 0; i < rows.length; i++) {
     const pagePos = i % (cols * rowsPerPage);
@@ -901,6 +1186,14 @@ async function printBulkCardsPdf() {
     doc.text(branding.schoolName, x + cardW / 2, y + 20, { align: "center" });
 
     doc.setTextColor(20, 20, 20);
+
+    if (insigniaData) {
+      doc.addImage(insigniaData, "PNG", x + 10, y + 36, 24, 24);
+    }
+    if (mineduData) {
+      doc.addImage(mineduData, "PNG", x + cardW - 34, y + 36, 24, 24);
+    }
+
     doc.setFontSize(9);
     doc.text(`DNI: ${s.dni}`, x + 10, y + 46);
     doc.text(`Alumno: ${s.nombres} ${s.apellidos}`.slice(0, 50), x + 10, y + 62);
@@ -1063,15 +1356,36 @@ function exportReportPdf() {
     r.profesor_encargado || "",
     r.estado || "",
   ]);
-  autoTable(doc, {
-    head,
-    body,
-    startY: 52,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [24, 58, 126] },
-  });
-  doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
-  setStatus("Reporte PDF descargado.");
+  Promise.all([urlToDataUrl(branding.insigniaUrl), urlToDataUrl(branding.mineduLogoUrl)])
+    .then(([insigniaData, mineduData]) => {
+      if (insigniaData) {
+        doc.addImage(insigniaData, "PNG", 740, 10, 34, 34);
+      }
+      if (mineduData) {
+        doc.addImage(mineduData, "PNG", 790, 10, 34, 34);
+      }
+      autoTable(doc, {
+        head,
+        body,
+        startY: 52,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [24, 58, 126] },
+        alternateRowStyles: { fillColor: [245, 248, 255] },
+      });
+      doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
+      setStatus("Reporte PDF descargado.");
+    })
+    .catch(() => {
+      autoTable(doc, {
+        head,
+        body,
+        startY: 52,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [24, 58, 126] },
+      });
+      doc.save(`reporte_asistencia_${todayIsoDate()}.pdf`);
+      setStatus("Reporte PDF descargado (sin logos por CORS de imagen).");
+    });
 }
 
 async function bootstrapAuth() {
@@ -1079,11 +1393,12 @@ async function bootstrapAuth() {
   currentSession = auth.data.session;
   updateUiByAuth();
   if (isLoggedIn()) {
+    await loadBrandingSettings();
     await loadTodayAttendance();
     if (isAdmin()) {
-      await loadBrandingSettings();
       await loadGlobalSchedule();
       await loadOverrides();
+      await loadSectionsAdmin();
       await loadStudentsAdmin();
       const t = todayIsoDate();
       $("rp-ref-date").value = t;
@@ -1094,6 +1409,7 @@ async function bootstrapAuth() {
     setStatus("Inicia sesion para usar asistencia y admin.", false);
   }
   renderOverrideCalendar();
+  applyBrandingToUi();
 }
 
 $("btn-login").addEventListener("click", signIn);
@@ -1113,6 +1429,8 @@ $("btn-cal-next").addEventListener("click", () => {
 });
 $("override-date").addEventListener("change", renderOverrideCalendar);
 $("btn-save-branding").addEventListener("click", saveBrandingSettings);
+$("btn-save-section").addEventListener("click", saveSection);
+$("btn-refresh-sections").addEventListener("click", loadSectionsAdmin);
 $("btn-refresh-students").addEventListener("click", loadStudentsAdmin);
 $("btn-save-student").addEventListener("click", saveStudent);
 $("btn-clear-student").addEventListener("click", clearStudentForm);
@@ -1122,6 +1440,7 @@ $("btn-print-cards-bulk").addEventListener("click", printBulkCardsPdf);
 $("btn-export-students-csv").addEventListener("click", exportStudentsCsv);
 $("student-search").addEventListener("input", renderStudentsTable);
 $("btn-import-students").addEventListener("click", importStudentsFile);
+$("btn-export-import-errors").addEventListener("click", exportImportErrorsCsv);
 $("btn-run-report").addEventListener("click", runAttendanceReport);
 $("btn-export-report-csv").addEventListener("click", exportReportCsv);
 $("btn-export-report-xlsx").addEventListener("click", exportReportXlsx);
@@ -1132,6 +1451,9 @@ $("btn-stop-scan").addEventListener("click", stopScanner);
 supabase.auth.onAuthStateChange((_event, session) => {
   currentSession = session;
   updateUiByAuth();
+  if (session?.user) {
+    loadBrandingSettings();
+  }
 });
 
 bootstrapAuth();

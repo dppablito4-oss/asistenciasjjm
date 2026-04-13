@@ -29,6 +29,46 @@ body {
   gap: 16px;
 }
 
+.hero {
+  min-height: 170px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background-size: cover;
+  background-position: center;
+  background-image: linear-gradient(120deg, #162a61 0%, #0f1f4c 100%);
+  overflow: hidden;
+}
+
+.hero-overlay {
+  min-height: 170px;
+  background: linear-gradient(90deg, rgba(4, 8, 20, 0.72), rgba(4, 8, 20, 0.36));
+  display: grid;
+  grid-template-columns: 86px 1fr 86px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+
+.hero-logo {
+  width: 74px;
+  height: 74px;
+  border-radius: 12px;
+  background: rgba(10, 18, 40, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  object-fit: contain;
+  padding: 6px;
+}
+
+.hero-center h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  letter-spacing: 0.4px;
+}
+
+.hero-center p {
+  margin-top: 8px;
+}
+
 .card {
   background: linear-gradient(180deg, #16203a 0%, #121a31 100%);
   border: 1px solid var(--line);
@@ -237,6 +277,15 @@ tr.is-selected {
 }
 
 @media (max-width: 760px) {
+  .hero-overlay {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .hero-logo {
+    margin: 0 auto;
+  }
+
   .grid.two {
     grid-template-columns: 1fr;
   }
