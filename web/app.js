@@ -3,7 +3,7 @@ import QRCode from "https://esm.sh/qrcode@1.5.4";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import autoTable from "https://esm.sh/jspdf-autotable@3.8.2";
-import { ADMIN_EMAILS, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
+import { ADMIN_EMAILS, PLATFORM_LOGIN_BRANDING, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const BRANDING_BUCKET = "branding-assets";
@@ -37,10 +37,10 @@ let studentsCache = [];
 let selectedStudentId = null;
 let lastReportRows = [];
 let branding = {
-  schoolName: "IE Asistencia",
-  placeLabel: "Huanuco",
-  panoramicUrl: "",
-  insigniaUrl: "",
+  schoolName: PLATFORM_LOGIN_BRANDING?.title || "IE Asistencia",
+  placeLabel: PLATFORM_LOGIN_BRANDING?.placeLabel || "LLATA",
+  panoramicUrl: PLATFORM_LOGIN_BRANDING?.panoramicUrl || "",
+  insigniaUrl: PLATFORM_LOGIN_BRANDING?.insigniaUrl || "",
 };
 let sectionsCache = [];
 let lastImportErrors = [];
@@ -194,6 +194,27 @@ function setScanStatus(text) {
 function safeImageUrl(url) {
   const value = String(url || "").trim();
   return value || "";
+}
+
+function applyPlatformLoginBranding() {
+  const title = String(PLATFORM_LOGIN_BRANDING?.title || "Plataforma de Asistencia").trim();
+  const subtitle = String(PLATFORM_LOGIN_BRANDING?.subtitle || "Inicia sesion para ingresar.").trim();
+  const insigniaUrl = safeImageUrl(PLATFORM_LOGIN_BRANDING?.insigniaUrl);
+  const panoramicUrl = safeImageUrl(PLATFORM_LOGIN_BRANDING?.panoramicUrl);
+
+  $("brand-title").textContent = title;
+  $("hero-school-name").textContent = title;
+  $("hero-place-label").textContent = subtitle;
+
+  const hero = $("brand-hero");
+  hero.style.backgroundImage = panoramicUrl
+    ? `linear-gradient(118deg, rgba(18, 30, 48, 0.68), rgba(10, 16, 26, 0.5)), url('${panoramicUrl.replace(/'/g, "%27")}')`
+    : "linear-gradient(128deg, #1a2a45 0%, #132033 44%, #101823 100%)";
+
+  const insignia = $("hero-insignia");
+  attachLogoFallback(insignia, "LOGIN");
+  insignia.src = insigniaUrl || FALLBACK_LOGO_SVG;
+  insignia.style.visibility = "visible";
 }
 
 function makePlaceholderDataUrl(text = "LOGO") {
@@ -484,7 +505,7 @@ async function signIn() {
   showAppShell();
   updateUiByAuth();
   setStatus("Login exitoso.");
-  await loadBrandingSettings();
+  applyBrandingToUi();
   await loadTodayAttendance();
   if (isAdmin()) {
     await loadSectionsAdmin();
@@ -506,6 +527,7 @@ async function signOut() {
   }
   currentSession = null;
   showLoginOnly();
+  applyPlatformLoginBranding();
   updateUiByAuth();
   todayBody.innerHTML = "";
   overrideBody.innerHTML = "";
@@ -610,33 +632,6 @@ async function loadGlobalSchedule() {
   $("global-tolerance").value = Number(map.tolerance_min || 10);
 }
 
-async function loadBrandingSettings() {
-  if (!requireLogin()) {
-    return;
-  }
-
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("key,value")
-    .in("key", ["school_name", "place_label", "panoramic_url", "insignia_url"]);
-
-  if (error) {
-    setStatus(`Error cargando identidad: ${error.message}`, false);
-    return;
-  }
-
-  const map = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
-  branding.schoolName = map.school_name || "IE Asistencia";
-  branding.placeLabel = map.place_label || "Huanuco";
-  branding.panoramicUrl = map.panoramic_url || "";
-  branding.insigniaUrl = map.insignia_url || "";
-  $("brand-school-name").value = branding.schoolName;
-  $("brand-place-label").value = branding.placeLabel;
-  $("brand-panoramic-url").value = branding.panoramicUrl;
-  $("brand-insignia-url").value = branding.insigniaUrl;
-  applyBrandingToUi();
-}
-
 function parseBirthDateCell(value) {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -659,63 +654,6 @@ function parseBirthDateCell(value) {
     return toIsoDate(date);
   }
   return text;
-}
-
-async function saveBrandingSettings() {
-  if (!requireAdmin()) {
-    return;
-  }
-  const schoolName = $("brand-school-name").value.trim();
-  const placeLabel = $("brand-place-label").value.trim();
-  const panoramicUrl = $("brand-panoramic-url").value.trim();
-  const insigniaUrl = $("brand-insignia-url").value.trim();
-  const panoramicFile = $("brand-panoramic-file").files?.[0] || null;
-  const insigniaFile = $("brand-insignia-file").files?.[0] || null;
-
-  let finalPanoramicUrl = panoramicUrl;
-  let finalInsigniaUrl = insigniaUrl;
-
-  try {
-    if (panoramicFile) {
-      finalPanoramicUrl = await uploadBrandingAsset(panoramicFile, "panoramic");
-    }
-    if (insigniaFile) {
-      finalInsigniaUrl = await uploadBrandingAsset(insigniaFile, "insignia");
-    }
-  } catch (err) {
-    setStatus(`Error subiendo imagen institucional: ${String(err.message || err)}`, false);
-    return;
-  }
-
-  const { error } = await supabase.rpc("set_branding_settings", {
-    p_school_name: schoolName,
-    p_place_label: placeLabel,
-  });
-  if (error) {
-    setStatus(`Error guardando identidad: ${error.message}`, false);
-    return;
-  }
-
-  const { error: assetsError } = await supabase.rpc("set_branding_assets", {
-    p_panoramic_url: finalPanoramicUrl,
-    p_insignia_url: finalInsigniaUrl,
-    p_minedu_logo_url: "",
-  });
-  if (assetsError) {
-    setStatus(`Error guardando imagenes de identidad: ${assetsError.message}`, false);
-    return;
-  }
-
-  branding.schoolName = schoolName || "IE Asistencia";
-  branding.placeLabel = placeLabel || "Huanuco";
-  branding.panoramicUrl = finalPanoramicUrl;
-  branding.insigniaUrl = finalInsigniaUrl;
-  $("brand-panoramic-url").value = finalPanoramicUrl;
-  $("brand-insignia-url").value = finalInsigniaUrl;
-  $("brand-panoramic-file").value = "";
-  $("brand-insignia-file").value = "";
-  applyBrandingToUi();
-  setStatus("Identidad institucional actualizada.");
 }
 
 async function saveGlobalSchedule() {
@@ -1652,10 +1590,11 @@ async function bootstrapAuth() {
     showAppShell();
   } else {
     showLoginOnly();
+    applyPlatformLoginBranding();
   }
   updateUiByAuth();
   if (isLoggedIn()) {
-    await loadBrandingSettings();
+    applyBrandingToUi();
     await loadTodayAttendance();
     if (isAdmin()) {
       await loadGlobalSchedule();
@@ -1672,7 +1611,11 @@ async function bootstrapAuth() {
     setStatus("Inicia sesion para usar asistencia y admin.", false);
   }
   renderOverrideCalendar();
-  applyBrandingToUi();
+  if (isLoggedIn()) {
+    applyBrandingToUi();
+  } else {
+    applyPlatformLoginBranding();
+  }
 }
 
 for (const btn of navButtons) {
@@ -1703,7 +1646,6 @@ $("btn-cal-next").addEventListener("click", () => {
   renderOverrideCalendar();
 });
 $("override-date").addEventListener("change", renderOverrideCalendar);
-$("btn-save-branding").addEventListener("click", saveBrandingSettings);
 $("btn-save-section").addEventListener("click", saveSection);
 $("btn-refresh-sections").addEventListener("click", loadSectionsAdmin);
 $("btn-refresh-students").addEventListener("click", loadStudentsAdmin);
@@ -1757,10 +1699,11 @@ supabase.auth.onAuthStateChange((_event, session) => {
     showAppShell();
   } else {
     showLoginOnly();
+    applyPlatformLoginBranding();
   }
   updateUiByAuth();
   if (session?.user) {
-    loadBrandingSettings();
+    applyBrandingToUi();
     activateView("dashboard-view");
   }
 });

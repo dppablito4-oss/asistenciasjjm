@@ -283,24 +283,14 @@
         <section id="config-view" class="module-view hidden" data-admin-view="1">
           <section id="admin-panel" class="card">
             <h2>Configuracion Admin</h2>
-            <p class="muted">Identidad institucional, horarios, excepciones y catalogos.</p>
+            <p class="muted">Horarios, excepciones y catalogos.</p>
 
             <h3>Identidad institucional</h3>
-            <div class="grid four">
-              <label>Nombre institucion<input id="brand-school-name" type="text" placeholder="IE Asistencia" /></label>
-              <label>Lugar (pie de carnet/reporte)<input id="brand-place-label" type="text" placeholder="Huanuco" /></label>
-              <label>Foto panoramica (URL)<input id="brand-panoramic-url" type="url" placeholder="https://.../panoramica.jpg" /></label>
-              <label><button id="btn-save-branding" type="button">Guardar identidad</button></label>
+            <div class="module-block">
+              <h3 class="block-title">Branding fijo</h3>
+              <p class="muted">La portada e insignia se cargan desde <strong>web/assets</strong> y desde la configuracion de entorno en <strong>web/config.js</strong>.</p>
+              <p class="muted">En este modo de una sola institucion no se usa subida de imagenes desde el panel.</p>
             </div>
-            <div class="grid two">
-              <label>Insignia principal (URL)<input id="brand-insignia-url" type="url" placeholder="https://.../insignia.png" /></label>
-              <label>Nota visual<input type="text" value="Solo se usa insignia + portada" disabled /></label>
-            </div>
-            <div class="grid two">
-              <label>Subir portada (JPG/PNG)<input id="brand-panoramic-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-              <label>Subir insignia (PNG)<input id="brand-insignia-file" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-            </div>
-            <p class="muted">Si subes archivos, el panel los guarda en Supabase Storage y actualiza las URLs automaticamente.</p>
 
             <hr />
 
