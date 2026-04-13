@@ -6,6 +6,14 @@ import autoTable from "https://esm.sh/jspdf-autotable@3.8.2";
 import { ADMIN_EMAILS, AUTH_DNI_DOMAIN, PLATFORM_LOGIN_BRANDING, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseProvisioning = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: "asistencia-provisioning-auth",
+  },
+});
 const BRANDING_BUCKET = "branding-assets";
 const FALLBACK_LOGO_SVG =
   "data:image/svg+xml;utf8," +
@@ -719,8 +727,72 @@ function periodBounds(period, refDate, startDate, endDate) {
   throw new Error("Periodo invalido");
 }
 
+async function lookupStudentDniForLogin(dni) {
+  const clean = String(dni || "").replace(/\D/g, "");
+  if (clean.length !== 8) {
+    return { known: true, exists: false };
+  }
+
+  const { data, error } = await withRetry(
+    () =>
+      supabase
+        .from("estudiantes")
+        .select("dni")
+        .eq("dni", clean)
+        .limit(1),
+    { label: "validacion de DNI", retries: 1, baseDelayMs: 250 }
+  );
+
+  if (error) {
+    return { known: false, exists: false };
+  }
+  return { known: true, exists: Array.isArray(data) && data.length > 0 };
+}
+
+function normalizeProvisioningErrorMessage(message) {
+  const text = String(message || "").toLowerCase();
+  if (text.includes("already registered") || text.includes("already exists") || text.includes("ya registrado")) {
+    return "already_exists";
+  }
+  return "other";
+}
+
+async function ensureStudentAuthAccount(dni) {
+  const digits = String(dni || "").replace(/\D/g, "");
+  if (digits.length !== 8) {
+    return { created: false, skipped: true, reason: "dni_invalido" };
+  }
+
+  const email = `${digits}@${AUTH_DNI_DOMAIN}`;
+  const tempPassword = digits;
+
+  const { error } = await withRetry(
+    () =>
+      supabaseProvisioning.auth.signUp({
+        email,
+        password: tempPassword,
+      }),
+    {
+      label: "creacion de cuenta de acceso",
+      retries: 1,
+      baseDelayMs: 300,
+    }
+  );
+
+  if (error) {
+    const normalized = normalizeProvisioningErrorMessage(error.message);
+    if (normalized === "already_exists") {
+      return { created: false, skipped: true, reason: "already_exists" };
+    }
+    return { created: false, skipped: false, reason: "error", message: String(error.message || "") };
+  }
+
+  return { created: true, skipped: false, reason: "created", email };
+}
+
 async function signIn() {
-  const email = normalizeLoginIdentifier($("email").value);
+  const rawLoginInput = String($("email").value || "").trim();
+  const email = normalizeLoginIdentifier(rawLoginInput);
   const password = $("password").value;
   if (!email || !password) {
     setStatus("Completa usuario y clave.", false);
@@ -729,6 +801,26 @@ async function signIn() {
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
+    const errorText = String(error.message || "");
+    const isInvalidCredentials = errorText.toLowerCase().includes("invalid login credentials");
+    const digits = rawLoginInput.replace(/\D/g, "");
+    const isDniLogin = rawLoginInput === digits && digits.length === 8;
+
+    if (isInvalidCredentials && isDniLogin) {
+      const lookup = await lookupStudentDniForLogin(digits);
+      if (lookup.known && lookup.exists) {
+        setStatus("Contrasena incorrecta. Intenta nuevamente o restablece la clave.", false);
+        return;
+      }
+      if (lookup.known && !lookup.exists) {
+        setStatus("No tenemos registro de ese DNI en la base de datos.", false);
+        return;
+      }
+
+      setStatus(`Acceso denegado para ${digits}. Verifica usuario o clave.`, false);
+      return;
+    }
+
     setStatus(`Login fallido: ${error.message}`, false);
     return;
   }
@@ -1388,7 +1480,18 @@ async function saveStudent() {
   }
 
   selectedStudentId = data || selectedStudentId;
-  setStatus("Alumno guardado correctamente.");
+  const provision = await ensureStudentAuthAccount(payload.p_dni);
+  if (provision.created) {
+    setStatus(`Alumno guardado y usuario creado (${payload.p_dni}@${AUTH_DNI_DOMAIN}). Clave temporal: DNI.`);
+  } else if (provision.reason === "already_exists") {
+    setStatus("Alumno guardado. El usuario de acceso ya existia.");
+  } else if (provision.reason === "dni_invalido") {
+    setStatus("Alumno guardado. No se pudo crear usuario automatico: DNI invalido.", false);
+  } else if (provision.reason === "error") {
+    setStatus(`Alumno guardado. No se pudo crear usuario automatico: ${provision.message}`, false);
+  } else {
+    setStatus("Alumno guardado correctamente.");
+  }
   await loadStudentsAdmin();
 }
 
@@ -1424,6 +1527,9 @@ async function importStudentsFile() {
   const seenInFile = new Set();
   let ok = 0;
   let fail = 0;
+  let authCreated = 0;
+  let authExisting = 0;
+  let authFailed = 0;
   lastImportErrors = [];
 
   for (let i = 0; i < rows.length; i++) {
@@ -1510,12 +1616,20 @@ async function importStudentsFile() {
       });
     } else {
       ok += 1;
+      const provision = await ensureStudentAuthAccount(dni);
+      if (provision.created) {
+        authCreated += 1;
+      } else if (provision.reason === "already_exists") {
+        authExisting += 1;
+      } else {
+        authFailed += 1;
+      }
     }
   }
 
   await loadStudentsAdmin();
-  $("import-summary").textContent = `Resultado importacion: OK ${ok} | Fallidos ${fail}`;
-  setStatus(`Importacion finalizada. OK: ${ok}, Fallidos: ${fail}.`, fail === 0);
+  $("import-summary").textContent = `Resultado importacion: OK ${ok} | Fallidos ${fail} | Usuarios creados ${authCreated} | Usuarios existentes ${authExisting} | Usuarios con error ${authFailed}`;
+  setStatus(`Importacion finalizada. OK: ${ok}, Fallidos: ${fail}, Usuarios creados: ${authCreated}.`, fail === 0 && authFailed === 0);
 }
 
 function exportImportErrorsCsv() {
