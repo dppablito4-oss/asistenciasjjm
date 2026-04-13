@@ -1375,23 +1375,95 @@ async function loadStudentsAdmin() {
     return;
   }
   studentsCache = data || [];
+  refreshStudentSectionFilter();
   renderStudentsTable();
+}
+
+function refreshStudentSectionFilter() {
+  const sectionSelect = $("student-filter-section");
+  if (!sectionSelect) {
+    return;
+  }
+
+  const currentValue = String(sectionSelect.value || "").toUpperCase();
+  const sections = Array.from(new Set((studentsCache || []).map((s) => String(s.seccion || "").toUpperCase()).filter(Boolean))).sort();
+
+  sectionSelect.innerHTML = `<option value="">Todas</option>${sections
+    .map((sec) => `<option value="${sec}">${sec}</option>`)
+    .join("")}`;
+
+  if (currentValue && sections.includes(currentValue)) {
+    sectionSelect.value = currentValue;
+  }
 }
 
 function getFilteredStudents() {
   const q = String($("student-search").value || "").trim().toLowerCase();
-  if (!q) {
-    return studentsCache;
-  }
+  const gradeFilter = String($("student-filter-grade")?.value || "").trim();
+  const sectionFilter = String($("student-filter-section")?.value || "").trim().toUpperCase();
+
   return studentsCache.filter((s) => {
     const full = `${s.dni} ${s.nombres} ${s.apellidos} ${s.status} ${s.status_note || ""}`.toLowerCase();
-    return full.includes(q);
+    const matchSearch = !q || full.includes(q);
+    const matchGrade = !gradeFilter || String(s.grado || "") === gradeFilter;
+    const matchSection = !sectionFilter || String(s.seccion || "").toUpperCase() === sectionFilter;
+    return matchSearch && matchGrade && matchSection;
   });
+}
+
+async function retireStudent(student) {
+  if (!requireAdmin()) {
+    return;
+  }
+  if (!student?.id) {
+    setStatus("No se pudo identificar al alumno a retirar.", false);
+    return;
+  }
+  const name = `${student.apellidos || ""}, ${student.nombres || ""}`.trim();
+  const ok = window.confirm(`Se retirara al alumno ${name || student.dni}. Continuar?`);
+  if (!ok) {
+    return;
+  }
+
+  const existingNote = String(student.status_note || "").trim();
+  const note = existingNote ? `${existingNote} | Retirado por admin ${todayIsoDate()}` : `Retirado por admin ${todayIsoDate()}`;
+  const payload = {
+    p_id: student.id,
+    p_dni: student.dni,
+    p_nombres: student.nombres,
+    p_apellidos: student.apellidos,
+    p_grado: Number(student.grado),
+    p_seccion: String(student.seccion || "").toUpperCase(),
+    p_genero: student.genero,
+    p_cargo: student.cargo || "Alumno",
+    p_birth_date: student.birth_date || null,
+    p_status: "RETIRADO",
+    p_status_note: note,
+  };
+
+  const { error } = await rpcWithRetry("upsert_student_admin", payload, { label: "retiro de alumno", retries: 2 });
+  if (error) {
+    setStatus(`No se pudo retirar alumno: ${error.message}`, false);
+    return;
+  }
+
+  if (selectedStudentId === student.id) {
+    clearStudentForm();
+  }
+  setStatus("Alumno retirado correctamente.");
+  await loadStudentsAdmin();
 }
 
 function renderStudentsTable() {
   studentsAdminBody.innerHTML = "";
   const rows = getFilteredStudents();
+
+  if (!rows.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="students-empty" colspan="7">No hay alumnos con los filtros actuales.</td>`;
+    studentsAdminBody.appendChild(tr);
+    return;
+  }
 
   for (const student of rows) {
     const tr = document.createElement("tr");
@@ -1400,6 +1472,7 @@ function renderStudentsTable() {
     }
     const btnEditId = `edit-${student.id}`;
     const btnQrId = `qr-${student.id}`;
+    const btnDeleteId = `del-${student.id}`;
     tr.innerHTML = `
       <td>${student.dni}</td>
       <td>${student.apellidos}, ${student.nombres}</td>
@@ -1408,8 +1481,11 @@ function renderStudentsTable() {
       <td>${student.status}</td>
       <td>${student.edad ?? "-"}</td>
       <td>
-        <button id="${btnEditId}" class="ghost" type="button">Editar</button>
-        <button id="${btnQrId}" class="ghost" type="button">Nuevo QR</button>
+        <div class="student-action-group">
+          <button id="${btnEditId}" class="ghost" type="button">Editar</button>
+          <button id="${btnQrId}" class="ghost" type="button">Nuevo QR</button>
+          <button id="${btnDeleteId}" class="danger" type="button">Borrar</button>
+        </div>
       </td>
     `;
     studentsAdminBody.appendChild(tr);
@@ -1422,6 +1498,10 @@ function renderStudentsTable() {
 
     tr.querySelector(`#${btnQrId}`)?.addEventListener("click", async () => {
       await regenerateStudentQr(student.id);
+    });
+
+    tr.querySelector(`#${btnDeleteId}`)?.addEventListener("click", async () => {
+      await retireStudent(student);
     });
   }
 }
@@ -2340,6 +2420,14 @@ $("btn-print-card").addEventListener("click", printSelectedCard);
 $("btn-print-cards-bulk").addEventListener("click", printBulkCardsPdf);
 $("btn-export-students-csv").addEventListener("click", exportStudentsCsv);
 $("student-search").addEventListener("input", renderStudentsTable);
+$("student-filter-grade").addEventListener("change", renderStudentsTable);
+$("student-filter-section").addEventListener("change", renderStudentsTable);
+$("btn-student-filters-clear").addEventListener("click", () => {
+  $("student-search").value = "";
+  $("student-filter-grade").value = "";
+  $("student-filter-section").value = "";
+  renderStudentsTable();
+});
 $("btn-import-students").addEventListener("click", importStudentsFile);
 $("btn-export-import-errors").addEventListener("click", exportImportErrorsCsv);
 $("btn-run-report").addEventListener("click", runAttendanceReport);

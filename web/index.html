@@ -35,8 +35,8 @@
       <section id="brand-hero" class="login-hero">
         <div class="hero-overlay login-hero-overlay">
           <div class="hero-center">
-            <h1 id="hero-school-name">IE Asistencia</h1>
-            <p id="hero-place-label" class="muted">Plataforma de asistencia escolar</p>
+            <h1 id="hero-school-name">IEI "JAPÓN"</h1>
+            <p id="hero-place-label" class="muted">Plataforma de asistencia</p>
           </div>
         </div>
       </section>
@@ -171,14 +171,34 @@
 
             <div class="module-block">
               <h3 class="block-title">Busqueda rapida</h3>
-              <div class="grid two">
+              <div class="grid four students-toolbar-grid">
                 <label>
                   Buscar (dni/nombre)
                   <input id="student-search" type="text" placeholder="Ej. 12345678 o Lopez" />
                 </label>
                 <label>
+                  Grado
+                  <select id="student-filter-grade">
+                    <option value="">Todos</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <label>
+                  Seccion
+                  <select id="student-filter-section">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label>
                   <button id="btn-refresh-students" type="button" class="ghost">Actualizar alumnos</button>
                 </label>
+              </div>
+              <div class="actions-row students-toolbar-actions">
+                <button id="btn-student-filters-clear" class="ghost" type="button">Limpiar filtros</button>
               </div>
             </div>
 

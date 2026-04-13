@@ -380,6 +380,38 @@ body {
   padding-bottom: 8px;
 }
 
+.students-toolbar-grid {
+  align-items: end;
+}
+
+.students-toolbar-actions {
+  grid-template-columns: 220px;
+  justify-content: start;
+}
+
+.students-toolbar-actions button {
+  min-height: 38px;
+}
+
+.student-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.student-action-group button {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.students-empty {
+  text-align: center;
+  color: #a8bfdf;
+  font-style: italic;
+  padding: 14px 10px;
+}
+
 .block-title {
   margin: 0 0 10px;
   font-size: 0.9rem;
@@ -930,6 +962,14 @@ tr.is-selected {
 
   .actions-row {
     grid-template-columns: 1fr;
+  }
+
+  .students-toolbar-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .student-action-group {
+    flex-direction: column;
   }
 
   .qr-reader {
