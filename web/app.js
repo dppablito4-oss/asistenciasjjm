@@ -102,6 +102,26 @@ function closeTopUserMenu() {
   menu.classList.remove("is-open");
 }
 
+function openMobileNav() {
+  const sidebar = document.querySelector(".sidebar");
+  const backdrop = $("mobile-nav-backdrop");
+  if (!sidebar || !backdrop) {
+    return;
+  }
+  sidebar.classList.add("is-open");
+  backdrop.classList.add("is-open");
+}
+
+function closeMobileNav() {
+  const sidebar = document.querySelector(".sidebar");
+  const backdrop = $("mobile-nav-backdrop");
+  if (!sidebar || !backdrop) {
+    return;
+  }
+  sidebar.classList.remove("is-open");
+  backdrop.classList.remove("is-open");
+}
+
 function applyModuleVisibilityByRole() {
   const admin = isAdmin();
   const student = isStudent();
@@ -128,10 +148,76 @@ function activateView(viewId) {
   navButtons.forEach((btn) => {
     btn.classList.toggle("is-active", btn.dataset.view === target);
   });
+  closeMobileNav();
+}
+
+async function loadStudentDashboardProfile() {
+  const card = $("student-profile-card");
+  const statsGrid = $("dashboard-stats-grid");
+  if (!card || !statsGrid) {
+    return;
+  }
+
+  const studentMode = isStudent();
+  card.classList.toggle("hidden", !studentMode);
+  statsGrid.classList.toggle("hidden", studentMode);
+  if (!studentMode) {
+    return;
+  }
+
+  const dni = String(currentUserProfile?.dni || "").trim();
+  $("student-profile-user").textContent = String(currentSession?.user?.email || "-");
+  if (!dni) {
+    $("student-profile-dni").textContent = "-";
+    $("student-profile-name").textContent = "No disponible";
+    $("student-profile-grade").textContent = "-";
+    $("student-profile-status").textContent = "-";
+    $("student-profile-role").textContent = "Alumno";
+    return;
+  }
+
+  const { data, error } = await withRetry(
+    () =>
+      supabase
+        .from("v_students_admin")
+        .select("dni,nombres,apellidos,grado,seccion,status,cargo")
+        .eq("dni", dni)
+        .limit(1),
+    { label: "perfil de alumno", retries: 1, baseDelayMs: 300 }
+  );
+
+  if (error || !Array.isArray(data) || !data.length) {
+    $("student-profile-dni").textContent = dni;
+    $("student-profile-name").textContent = "No encontrado";
+    $("student-profile-grade").textContent = "-";
+    $("student-profile-status").textContent = "-";
+    $("student-profile-role").textContent = "Alumno";
+    return;
+  }
+
+  const row = data[0];
+  $("student-profile-dni").textContent = row.dni || dni;
+  $("student-profile-name").textContent = `${row.apellidos || ""}, ${row.nombres || ""}`.replace(/^,\s*/, "") || "-";
+  $("student-profile-grade").textContent = `${row.grado || ""}${row.seccion || ""}` || "-";
+  $("student-profile-status").textContent = row.status || "-";
+  $("student-profile-role").textContent = row.cargo || "Alumno";
 }
 
 async function refreshDashboardKpis(records = []) {
   if (!isLoggedIn()) {
+    return;
+  }
+  if (isStudent()) {
+    const totalNode = $("stat-total");
+    const attendanceNode = $("stat-attendance");
+    const sectionsNode = $("stat-sections");
+    const lastNode = $("stat-last");
+    if (totalNode && attendanceNode && sectionsNode && lastNode) {
+      totalNode.textContent = "1";
+      attendanceNode.textContent = records.length ? "100%" : "0%";
+      sectionsNode.textContent = "1";
+      lastNode.textContent = records?.[0]?.hora ? `Hoy ${records[0].hora}` : "-";
+    }
     return;
   }
   const totalNode = $("stat-total");
@@ -840,6 +926,7 @@ async function signIn() {
   setStatus("Login exitoso.");
   applyBrandingToUi();
   await loadTodayAttendance();
+  await loadStudentDashboardProfile();
   if (isAdmin()) {
     await loadSectionsAdmin();
     await loadAssignmentAdminData();
@@ -2486,6 +2573,7 @@ async function bootstrapAuth() {
     setPasswordGateVisible(currentUserProfile.mustChangePassword, currentUserProfile.mustChangePassword ? "Debes cambiar tu clave para continuar." : "");
     applyBrandingToUi();
     await loadTodayAttendance();
+    await loadStudentDashboardProfile();
     if (isAdmin()) {
       await loadGlobalSchedule();
       await loadOverrides();
@@ -2608,6 +2696,33 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeTopUserMenu();
+    closeMobileNav();
+  }
+});
+
+const mobileNavToggle = $("mobile-nav-toggle");
+if (mobileNavToggle) {
+  mobileNavToggle.addEventListener("click", () => {
+    const sidebar = document.querySelector(".sidebar");
+    if (!sidebar) {
+      return;
+    }
+    if (sidebar.classList.contains("is-open")) {
+      closeMobileNav();
+    } else {
+      openMobileNav();
+    }
+  });
+}
+
+const mobileNavBackdrop = $("mobile-nav-backdrop");
+if (mobileNavBackdrop) {
+  mobileNavBackdrop.addEventListener("click", closeMobileNav);
+}
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 760) {
+    closeMobileNav();
   }
 });
 

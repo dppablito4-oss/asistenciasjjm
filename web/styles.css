@@ -255,6 +255,20 @@ body {
   margin-top: 54px;
 }
 
+.mobile-nav-toggle,
+.mobile-nav-backdrop {
+  display: none;
+}
+
+.student-profile-grid {
+  row-gap: 12px;
+}
+
+.student-profile-grid p {
+  margin: 0;
+  color: #d7e4fb;
+}
+
 .top-user-menu {
   position: relative;
 }
@@ -862,21 +876,71 @@ tr.is-selected {
 
   .nav-btn {
     font-size: 0.9rem;
-    display: flex;
-    align-items: center;
     min-width: 0;
     width: 100%;
-    text-align: center;
-    justify-content: center;
-    padding: 8px 10px;
+    text-align: left;
+    justify-content: flex-start;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #2e4263;
+    background: #172133;
   }
 
   .sidebar {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(82vw, 300px);
+    border-right: 1px solid #2e4467;
+    border-bottom: 0;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    align-items: stretch;
-    overflow: visible;
+    padding: calc(env(safe-area-inset-top, 0px) + 58px) 12px 16px;
+    overflow-y: auto;
+    z-index: 94;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    background: linear-gradient(180deg, #101b2d 0%, #0e1726 100%);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    left: 8px;
+    z-index: 96;
+    min-height: 40px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #325084;
+    border-radius: 10px;
+    background: #15243a;
+    color: #eaf2ff;
+    font-size: 1.2rem;
+    padding: 4px 10px;
+  }
+
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 93;
+    background: rgba(5, 10, 18, 0.58);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .mobile-nav-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .app-account {
@@ -896,7 +960,7 @@ tr.is-selected {
   }
 
   .top-user-email {
-    max-width: 150px;
+    max-width: 130px;
     font-size: 0.86rem;
   }
 
@@ -921,6 +985,10 @@ tr.is-selected {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .student-profile-grid {
     grid-template-columns: 1fr;
   }
 

@@ -53,6 +53,9 @@
       </aside>
 
       <section class="shell-main">
+        <button id="mobile-nav-toggle" class="mobile-nav-toggle" type="button" aria-label="Abrir menu">☰</button>
+        <div id="mobile-nav-backdrop" class="mobile-nav-backdrop" aria-hidden="true"></div>
+
         <div class="app-account">
           <div id="top-user-menu" class="top-user-menu">
             <button id="top-user-trigger" class="top-user-trigger" type="button" aria-label="Menu de usuario">
@@ -92,12 +95,24 @@
         </section>
 
         <section id="dashboard-view" class="module-view">
-          <div class="stats-grid">
+          <div id="dashboard-stats-grid" class="stats-grid">
             <article class="stat-card"><h4>Total Alumnos</h4><p id="stat-total">0</p></article>
             <article class="stat-card"><h4>Asistencia Hoy</h4><p id="stat-attendance">0%</p></article>
             <article class="stat-card"><h4>Clases Activas</h4><p id="stat-sections">0</p></article>
             <article class="stat-card"><h4>Ultimo Registro</h4><p id="stat-last">-</p></article>
           </div>
+
+          <section id="student-profile-card" class="card hidden">
+            <h2>Mi Perfil</h2>
+            <div class="grid two student-profile-grid">
+              <p><strong>DNI:</strong> <span id="student-profile-dni">-</span></p>
+              <p><strong>Estado:</strong> <span id="student-profile-status">-</span></p>
+              <p><strong>Estudiante:</strong> <span id="student-profile-name">-</span></p>
+              <p><strong>Grado/Seccion:</strong> <span id="student-profile-grade">-</span></p>
+              <p><strong>Cargo:</strong> <span id="student-profile-role">-</span></p>
+              <p><strong>Usuario:</strong> <span id="student-profile-user">-</span></p>
+            </div>
+          </section>
 
           <section class="card">
             <h2>Ultimos Registros</h2>
