@@ -3,7 +3,7 @@ import QRCode from "https://esm.sh/qrcode@1.5.4";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 import autoTable from "https://esm.sh/jspdf-autotable@3.8.2";
-import { ADMIN_EMAILS, PLATFORM_LOGIN_BRANDING, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
+import { ADMIN_EMAILS, AUTH_DNI_DOMAIN, PLATFORM_LOGIN_BRANDING, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./config.js";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 const BRANDING_BUCKET = "branding-assets";
@@ -50,6 +50,12 @@ let lastScanAt = 0;
 let lastScannedText = "";
 let calendarMonthDate = new Date();
 let overrideDateSet = new Set();
+let currentUserProfile = {
+  role: null,
+  mustChangePassword: false,
+  isActive: true,
+  dni: null,
+};
 
 function showLoginOnly() {
   loginScreen.classList.remove("hidden");
@@ -143,7 +149,19 @@ function isLoggedIn() {
 }
 
 function isAdmin() {
-  return isAdminEmail(currentSession?.user?.email);
+  return currentUserProfile.role === "admin_tic" || isAdminEmail(currentSession?.user?.email);
+}
+
+function isTeacher() {
+  return currentUserProfile.role === "docente";
+}
+
+function isStudent() {
+  return currentUserProfile.role === "alumno";
+}
+
+function canTakeAttendance() {
+  return isAdmin() || isTeacher();
 }
 
 function setAuthBadge() {
@@ -152,15 +170,19 @@ function setAuthBadge() {
     badge.textContent = "No autenticado";
     return;
   }
-  const role = isAdmin() ? "Admin" : "Operador";
+  const role = isAdmin() ? "Admin TIC" : isTeacher() ? "Docente" : isStudent() ? "Alumno" : "Operador";
   badge.textContent = `Sesion: ${currentSession.user.email} (${role})`;
 }
 
 function updateUiByAuth() {
   setAuthBadge();
   setTopbarUser();
-  $("btn-mark").disabled = !isLoggedIn();
+  $("btn-mark").disabled = !isLoggedIn() || !canTakeAttendance() || currentUserProfile.mustChangePassword;
   $("btn-refresh").disabled = !isLoggedIn();
+  $("btn-start-scan").disabled = !isLoggedIn() || !canTakeAttendance() || currentUserProfile.mustChangePassword;
+  $("btn-stop-scan").disabled = !isLoggedIn() || !canTakeAttendance();
+  $("teacher").disabled = !isLoggedIn() || !canTakeAttendance();
+  $("qr-token").disabled = !isLoggedIn() || !canTakeAttendance();
   $("admin-panel").classList.toggle("hidden", !isAdmin());
   applyModuleVisibilityByRole();
 }
@@ -194,6 +216,87 @@ function setScanStatus(text) {
 function safeImageUrl(url) {
   const value = String(url || "").trim();
   return value || "";
+}
+
+function normalizeLoginIdentifier(input) {
+  const raw = String(input || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 8 && raw === digits) {
+    return `${digits}@${AUTH_DNI_DOMAIN}`;
+  }
+  return raw.toLowerCase();
+}
+
+function setPasswordGateVisible(visible, message = "") {
+  const gate = $("password-gate");
+  const msg = $("password-gate-msg");
+  if (!gate || !msg) {
+    return;
+  }
+  gate.classList.toggle("hidden", !visible);
+  msg.textContent = message;
+}
+
+async function loadMyProfile() {
+  if (!isLoggedIn()) {
+    currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
+    return;
+  }
+  const { data, error } = await supabase.rpc("get_my_profile");
+  if (error) {
+    setStatus(`No se pudo cargar perfil: ${error.message}`, false);
+    currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
+    return;
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  currentUserProfile = {
+    role: row?.role || null,
+    mustChangePassword: !!row?.must_change_password,
+    isActive: row?.is_active !== false,
+    dni: row?.dni || null,
+  };
+}
+
+async function changeInitialPassword() {
+  if (!requireLogin()) {
+    return;
+  }
+  const nextPass = String($("new-password")?.value || "");
+  const confirmPass = String($("confirm-password")?.value || "");
+  if (nextPass.length < 8) {
+    setPasswordGateVisible(true, "La nueva clave debe tener minimo 8 caracteres.");
+    return;
+  }
+  if (nextPass !== confirmPass) {
+    setPasswordGateVisible(true, "Las claves no coinciden.");
+    return;
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: nextPass });
+  if (error) {
+    setPasswordGateVisible(true, `No se pudo actualizar clave: ${error.message}`);
+    return;
+  }
+
+  const { error: markError } = await supabase.rpc("complete_initial_password_change");
+  if (markError) {
+    setPasswordGateVisible(true, `Clave actualizada, pero no se pudo cerrar primer acceso: ${markError.message}`);
+    return;
+  }
+
+  currentUserProfile.mustChangePassword = false;
+  setPasswordGateVisible(false, "");
+  if ($("new-password")) {
+    $("new-password").value = "";
+  }
+  if ($("confirm-password")) {
+    $("confirm-password").value = "";
+  }
+  updateUiByAuth();
+  setStatus("Clave personal actualizada.");
 }
 
 function applyPlatformLoginBranding() {
@@ -488,10 +591,10 @@ function periodBounds(period, refDate, startDate, endDate) {
 }
 
 async function signIn() {
-  const email = $("email").value.trim();
+  const email = normalizeLoginIdentifier($("email").value);
   const password = $("password").value;
   if (!email || !password) {
-    setStatus("Completa correo y clave.", false);
+    setStatus("Completa usuario y clave.", false);
     return;
   }
 
@@ -502,8 +605,15 @@ async function signIn() {
   }
   const auth = await supabase.auth.getSession();
   currentSession = auth.data.session;
+  await loadMyProfile();
   showAppShell();
   updateUiByAuth();
+  if (!currentUserProfile.isActive) {
+    await signOut();
+    setStatus("Tu cuenta esta inactiva. Contacta al admin TIC.", false);
+    return;
+  }
+  setPasswordGateVisible(currentUserProfile.mustChangePassword, currentUserProfile.mustChangePassword ? "Debes cambiar tu clave para continuar." : "");
   setStatus("Login exitoso.");
   applyBrandingToUi();
   await loadTodayAttendance();
@@ -526,8 +636,10 @@ async function signOut() {
     return;
   }
   currentSession = null;
+  currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
   showLoginOnly();
   applyPlatformLoginBranding();
+  setPasswordGateVisible(false, "");
   updateUiByAuth();
   todayBody.innerHTML = "";
   overrideBody.innerHTML = "";
@@ -1588,12 +1700,19 @@ async function bootstrapAuth() {
   currentSession = auth.data.session;
   if (isLoggedIn()) {
     showAppShell();
+    await loadMyProfile();
   } else {
     showLoginOnly();
     applyPlatformLoginBranding();
   }
   updateUiByAuth();
   if (isLoggedIn()) {
+    if (!currentUserProfile.isActive) {
+      await signOut();
+      setStatus("Tu cuenta esta inactiva. Contacta al admin TIC.", false);
+      return;
+    }
+    setPasswordGateVisible(currentUserProfile.mustChangePassword, currentUserProfile.mustChangePassword ? "Debes cambiar tu clave para continuar." : "");
     applyBrandingToUi();
     await loadTodayAttendance();
     if (isAdmin()) {
@@ -1664,6 +1783,7 @@ $("btn-export-report-xlsx").addEventListener("click", exportReportXlsx);
 $("btn-export-report-pdf").addEventListener("click", exportReportPdf);
 $("btn-start-scan").addEventListener("click", startScanner);
 $("btn-stop-scan").addEventListener("click", stopScanner);
+$("btn-change-password").addEventListener("click", changeInitialPassword);
 
 const topUserTrigger = $("top-user-trigger");
 if (topUserTrigger) {
@@ -1697,11 +1817,17 @@ supabase.auth.onAuthStateChange((_event, session) => {
   currentSession = session;
   if (session?.user) {
     showAppShell();
+    loadMyProfile().then(() => {
+      updateUiByAuth();
+      setPasswordGateVisible(currentUserProfile.mustChangePassword, currentUserProfile.mustChangePassword ? "Debes cambiar tu clave para continuar." : "");
+    });
   } else {
     showLoginOnly();
     applyPlatformLoginBranding();
+    currentUserProfile = { role: null, mustChangePassword: false, isActive: true, dni: null };
+    setPasswordGateVisible(false, "");
+    updateUiByAuth();
   }
-  updateUiByAuth();
   if (session?.user) {
     applyBrandingToUi();
     activateView("dashboard-view");

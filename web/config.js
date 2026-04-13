@@ -3,6 +3,7 @@
 export const SUPABASE_URL = "https://kahdnjjzzvliklxwlpse.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_88GyJuBlUZeIT5YlTbma1w_994h7mGd";
 export const ADMIN_EMAILS = ["pabloclsa87@gmail.com"];
+export const AUTH_DNI_DOMAIN = "ie.local";
 
 // Fixed branding for single-institution deployment.
 export const PLATFORM_LOGIN_BRANDING = {

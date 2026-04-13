@@ -14,8 +14,8 @@
         <p class="muted">Acceso al sistema institucional</p>
 
         <label>
-          Correo
-          <input id="email" type="email" placeholder="admin@colegio.edu" />
+          Usuario (DNI o correo)
+          <input id="email" type="text" placeholder="12345678" />
         </label>
         <label>
           Clave
@@ -64,6 +64,21 @@
           </div>
         </div>
 
+        <section id="password-gate" class="password-gate hidden" aria-live="polite">
+          <div class="password-gate-card">
+            <h3>Cambio obligatorio de clave</h3>
+            <p class="muted">Primer ingreso detectado. Debes registrar una clave personal para continuar.</p>
+            <div class="grid two">
+              <label>Nueva clave<input id="new-password" type="password" placeholder="Minimo 8 caracteres" /></label>
+              <label>Confirmar clave<input id="confirm-password" type="password" placeholder="Repite tu clave" /></label>
+            </div>
+            <div class="actions-row">
+              <button id="btn-change-password" type="button">Actualizar clave</button>
+            </div>
+            <p id="password-gate-msg" class="muted"></p>
+          </div>
+        </section>
+
         <section id="dashboard-view" class="module-view">
           <section class="hero">
             <div class="hero-overlay">
@@ -107,16 +122,16 @@
           <section class="card">
             <h2>Modulo de Registro de Asistencia</h2>
             <div class="grid two">
-              <label>
+              <label id="attendance-teacher-wrap">
                 Profesor encargado
                 <input id="teacher" type="text" placeholder="Prof. Ramirez" />
               </label>
-              <label>
+              <label id="attendance-token-wrap">
                 Token/DNI
                 <input id="qr-token" type="text" placeholder="Escanea o pega token" />
               </label>
             </div>
-            <div class="actions-row">
+            <div id="attendance-actions" class="actions-row">
               <button id="btn-mark">Marcar asistencia</button>
               <button id="btn-refresh" class="ghost">Actualizar hoy</button>
               <button id="btn-start-scan" class="ghost">Iniciar escaner QR</button>

@@ -280,6 +280,26 @@ body {
   gap: 14px;
 }
 
+.password-gate {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 11, 18, 0.68);
+  backdrop-filter: blur(2px);
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.password-gate-card {
+  width: min(680px, 100%);
+  background: linear-gradient(180deg, #1a2436 0%, #162030 100%);
+  border: 1px solid #35507f;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 14px 34px rgba(2, 6, 18, 0.45);
+}
+
 .module-block {
   margin: 14px 0 0;
   border: 1px solid #2e3f5f;
