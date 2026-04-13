@@ -405,6 +405,18 @@ body {
   font-size: 0.82rem;
 }
 
+#students-admin-body input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4e8ef9;
+}
+
+#qr-selection-summary {
+  margin-top: 8px;
+  margin-bottom: 0;
+  color: #b9cdef;
+}
+
 .students-empty {
   text-align: center;
   color: #a8bfdf;

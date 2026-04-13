@@ -44,6 +44,7 @@ const moduleViews = Array.from(document.querySelectorAll(".module-view"));
 let currentSession = null;
 let studentsCache = [];
 let selectedStudentId = null;
+let selectedQrStudentIds = new Set();
 let lastReportRows = [];
 let branding = {
   schoolName: PLATFORM_LOGIN_BRANDING?.title || "IE Asistencia",
@@ -1359,6 +1360,36 @@ function clearStudentForm() {
   renderStudentsTable();
 }
 
+function isStudentActive(student) {
+  return String(student?.status || "").toUpperCase() === "ACTIVO";
+}
+
+function getQrEligibleStudents(rows = studentsCache) {
+  return (rows || []).filter((s) => isStudentActive(s));
+}
+
+function updateQrSelectionSummary() {
+  const summary = $("qr-selection-summary");
+  if (!summary) {
+    return;
+  }
+  const selected = Array.from(selectedQrStudentIds)
+    .map((id) => studentsCache.find((s) => s.id === id))
+    .filter((s) => !!s && isStudentActive(s)).length;
+  summary.textContent = `Seleccion QR: ${selected} alumnos activos.`;
+}
+
+function getSelectedQrStudents() {
+  return Array.from(selectedQrStudentIds)
+    .map((id) => studentsCache.find((s) => s.id === id))
+    .filter((s) => !!s && isStudentActive(s));
+}
+
+function sanitizeQrSelection() {
+  const validIds = new Set(getQrEligibleStudents(studentsCache).map((s) => s.id));
+  selectedQrStudentIds = new Set(Array.from(selectedQrStudentIds).filter((id) => validIds.has(id)));
+}
+
 async function loadStudentsAdmin() {
   if (!requireAdmin()) {
     return;
@@ -1375,6 +1406,7 @@ async function loadStudentsAdmin() {
     return;
   }
   studentsCache = data || [];
+  sanitizeQrSelection();
   refreshStudentSectionFilter();
   renderStudentsTable();
 }
@@ -1462,8 +1494,9 @@ function renderStudentsTable() {
 
   if (!rows.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td class="students-empty" colspan="7">No hay alumnos con los filtros actuales.</td>`;
+    tr.innerHTML = `<td class="students-empty" colspan="8">No hay alumnos con los filtros actuales.</td>`;
     studentsAdminBody.appendChild(tr);
+    updateQrSelectionSummary();
     return;
   }
 
@@ -1475,7 +1508,11 @@ function renderStudentsTable() {
     const btnEditId = `edit-${student.id}`;
     const btnQrId = `qr-${student.id}`;
     const btnDeleteId = `del-${student.id}`;
+    const qrChkId = `qr-sel-${student.id}`;
+    const isActive = isStudentActive(student);
+    const qrChecked = selectedQrStudentIds.has(student.id) ? "checked" : "";
     tr.innerHTML = `
+      <td><input id="${qrChkId}" type="checkbox" ${qrChecked} ${isActive ? "" : "disabled"} /></td>
       <td>${student.dni}</td>
       <td>${student.apellidos}, ${student.nombres}</td>
       <td>${student.grado}${student.seccion}</td>
@@ -1485,12 +1522,21 @@ function renderStudentsTable() {
       <td>
         <div class="student-action-group">
           <button id="${btnEditId}" class="ghost" type="button">Editar</button>
-          <button id="${btnQrId}" class="ghost" type="button">Nuevo QR</button>
+          <button id="${btnQrId}" class="ghost" type="button" ${isActive ? "" : "disabled"}>Nuevo QR</button>
           <button id="${btnDeleteId}" class="danger" type="button">Borrar</button>
         </div>
       </td>
     `;
     studentsAdminBody.appendChild(tr);
+
+    tr.querySelector(`#${qrChkId}`)?.addEventListener("change", (ev) => {
+      if (ev.target.checked) {
+        selectedQrStudentIds.add(student.id);
+      } else {
+        selectedQrStudentIds.delete(student.id);
+      }
+      updateQrSelectionSummary();
+    });
 
     tr.querySelector(`#${btnEditId}`)?.addEventListener("click", () => {
       selectedStudentId = student.id;
@@ -1506,6 +1552,7 @@ function renderStudentsTable() {
       await retireStudent(student);
     });
   }
+  updateQrSelectionSummary();
 }
 
 function renderReportTable() {
@@ -1746,6 +1793,11 @@ function exportImportErrorsCsv() {
 
 async function regenerateStudentQr(studentId) {
   if (!requireAdmin()) {
+    return;
+  }
+  const student = studentsCache.find((s) => s.id === studentId);
+  if (!student || !isStudentActive(student)) {
+    setStatus("Solo se puede regenerar QR para alumnos activos.", false);
     return;
   }
   const { error } = await supabase.rpc("regenerate_student_qr_token", {
@@ -2003,13 +2055,76 @@ async function downloadSelectedQr() {
   if (!requireAdmin()) {
     return;
   }
-  const student = getSelectedStudent();
-  if (!student) {
-    setStatus("Selecciona un alumno primero.", false);
+  const selected = getSelectedQrStudents();
+  if (!selected.length) {
+    const fallback = getSelectedStudent();
+    if (!fallback || !isStudentActive(fallback)) {
+      setStatus("Selecciona al menos un alumno activo para descargar QR.", false);
+      return;
+    }
+    const dataUrl = await studentQrDataUrl(fallback);
+    await saveQrForStudent(fallback, dataUrl);
     return;
   }
-  const dataUrl = await studentQrDataUrl(student);
-  await saveQrForStudent(student, dataUrl);
+
+  let done = 0;
+  for (const student of selected) {
+    const dataUrl = await studentQrDataUrl(student);
+    const ok = await saveQrForStudent(student, dataUrl);
+    if (ok) {
+      done += 1;
+    }
+  }
+  setStatus(`QR descargados: ${done} de ${selected.length} seleccionados.`);
+}
+
+async function regenerateSelectedQrs() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const selected = getSelectedQrStudents();
+  if (!selected.length) {
+    setStatus("Selecciona alumnos activos para regenerar QR.", false);
+    return;
+  }
+
+  let ok = 0;
+  let fail = 0;
+  for (const student of selected) {
+    const { error } = await rpcWithRetry("regenerate_student_qr_token", { p_student_id: student.id }, { label: "regeneracion de QR", retries: 2 });
+    if (error) {
+      fail += 1;
+    } else {
+      ok += 1;
+    }
+  }
+  await loadStudentsAdmin();
+  setStatus(`Regeneracion QR completada. OK: ${ok}, Fallidos: ${fail}.`, fail === 0);
+}
+
+async function regenerateFilteredQrs() {
+  if (!requireAdmin()) {
+    return;
+  }
+  const filtered = getQrEligibleStudents(getFilteredStudents());
+  if (!filtered.length) {
+    setStatus("No hay alumnos activos en el bloque filtrado para regenerar QR.", false);
+    return;
+  }
+
+  let ok = 0;
+  let fail = 0;
+  for (const student of filtered) {
+    const { error } = await rpcWithRetry("regenerate_student_qr_token", { p_student_id: student.id }, { label: "regeneracion por bloque", retries: 2 });
+    if (error) {
+      fail += 1;
+    } else {
+      ok += 1;
+      selectedQrStudentIds.add(student.id);
+    }
+  }
+  await loadStudentsAdmin();
+  setStatus(`Regeneracion por bloque completada. OK: ${ok}, Fallidos: ${fail}.`, fail === 0);
 }
 
 async function printSelectedCard() {
@@ -2433,6 +2548,19 @@ $("btn-clear-student").addEventListener("click", clearStudentForm);
 $("btn-download-selected-qr").addEventListener("click", downloadSelectedQr);
 $("btn-print-card").addEventListener("click", printSelectedCard);
 $("btn-print-cards-bulk").addEventListener("click", printBulkCardsPdf);
+$("btn-regenerate-selected-qr").addEventListener("click", regenerateSelectedQrs);
+$("btn-regenerate-filtered-qr").addEventListener("click", regenerateFilteredQrs);
+$("btn-select-visible-qr").addEventListener("click", () => {
+  const visible = getQrEligibleStudents(getFilteredStudents());
+  for (const s of visible) {
+    selectedQrStudentIds.add(s.id);
+  }
+  renderStudentsTable();
+});
+$("btn-clear-selected-qr").addEventListener("click", () => {
+  selectedQrStudentIds = new Set();
+  renderStudentsTable();
+});
 $("btn-export-students-csv").addEventListener("click", exportStudentsCsv);
 $("student-search").addEventListener("input", renderStudentsTable);
 $("student-filter-status").addEventListener("change", renderStudentsTable);

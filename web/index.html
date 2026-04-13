@@ -242,11 +242,16 @@
               <h3 class="block-title">Acciones</h3>
               <div class="actions-row">
                 <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
-                <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
+                <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionados</button>
+                <button id="btn-regenerate-selected-qr" class="ghost" type="button">Regenerar QR seleccionados</button>
+                <button id="btn-regenerate-filtered-qr" class="ghost" type="button">Regenerar QR por bloque filtrado</button>
+                <button id="btn-select-visible-qr" class="ghost" type="button">Seleccionar visibles</button>
+                <button id="btn-clear-selected-qr" class="ghost" type="button">Quitar seleccion</button>
                 <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
                 <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
                 <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
               </div>
+              <p id="qr-selection-summary" class="muted">Seleccion QR: 0 alumnos.</p>
             </div>
 
             <div class="module-block">
@@ -267,7 +272,7 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>DNI</th><th>Estudiante</th><th>Grado</th><th>Genero</th><th>Estado</th><th>Edad</th><th>Accion</th>
+                      <th>Sel</th><th>DNI</th><th>Estudiante</th><th>Grado</th><th>Genero</th><th>Estado</th><th>Edad</th><th>Accion</th>
                     </tr>
                   </thead>
                   <tbody id="students-admin-body"></tbody>
