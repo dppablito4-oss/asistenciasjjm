@@ -279,8 +279,8 @@ function applyBrandingToUi() {
   const hero = $("brand-hero");
   const pano = safeImageUrl(branding.panoramicUrl);
   hero.style.backgroundImage = pano
-    ? `linear-gradient(118deg, rgba(22, 25, 30, 0.68), rgba(12, 14, 16, 0.5)), url('${pano.replace(/'/g, "%27")}')`
-    : "linear-gradient(120deg, #1b1f24 0%, #14171b 100%)";
+    ? `linear-gradient(118deg, rgba(18, 30, 48, 0.68), rgba(10, 16, 26, 0.5)), url('${pano.replace(/'/g, "%27")}')`
+    : "linear-gradient(128deg, #1a2a45 0%, #132033 44%, #101823 100%)";
 
   const insignia = $("hero-insignia");
   const insUrl = safeImageUrl(branding.insigniaUrl);
@@ -1236,7 +1236,12 @@ async function startScanner() {
   try {
     await scannerInstance.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: 240 },
+      {
+        fps: 12,
+        aspectRatio: 1.333334,
+        // No qrbox: scan the full visible frame so the code does not need to be centered.
+        disableFlip: false,
+      },
       async (decodedText) => {
         const now = Date.now();
         if (decodedText === lastScannedText && now - lastScanAt < 1800) {
