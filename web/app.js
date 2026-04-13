@@ -62,11 +62,22 @@ function showAppShell() {
 }
 
 function setTopbarUser() {
-  const node = $("top-user-email");
-  if (!node) {
+  const emailNode = $("top-user-email");
+  const initialNode = $("top-user-initial");
+  const email = String(currentSession?.user?.email || "").trim();
+  if (!emailNode || !initialNode) {
     return;
   }
-  node.textContent = currentSession?.user?.email || "";
+  emailNode.textContent = email;
+  initialNode.textContent = email ? email.charAt(0).toUpperCase() : "U";
+}
+
+function closeTopUserMenu() {
+  const menu = $("top-user-menu");
+  if (!menu) {
+    return;
+  }
+  menu.classList.remove("is-open");
 }
 
 function applyModuleVisibilityByRole() {
@@ -503,6 +514,7 @@ async function signOut() {
     dashboardRecentBody.innerHTML = "";
   }
   await stopScanner();
+  closeTopUserMenu();
   setStatus("Sesion cerrada.");
 }
 
@@ -1705,6 +1717,34 @@ $("btn-export-report-xlsx").addEventListener("click", exportReportXlsx);
 $("btn-export-report-pdf").addEventListener("click", exportReportPdf);
 $("btn-start-scan").addEventListener("click", startScanner);
 $("btn-stop-scan").addEventListener("click", stopScanner);
+
+const topUserTrigger = $("top-user-trigger");
+if (topUserTrigger) {
+  topUserTrigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    const menu = $("top-user-menu");
+    if (!menu) {
+      return;
+    }
+    menu.classList.toggle("is-open");
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const menu = $("top-user-menu");
+  if (!menu) {
+    return;
+  }
+  if (!menu.contains(event.target)) {
+    menu.classList.remove("is-open");
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeTopUserMenu();
+  }
+});
 
 supabase.auth.onAuthStateChange((_event, session) => {
   currentSession = session;

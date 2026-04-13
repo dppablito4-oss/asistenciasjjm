@@ -53,10 +53,14 @@
 
       <section class="shell-main">
         <header class="topbar">
-          <div class="top-title">Sistema de Asistencia</div>
-          <div class="row">
-            <span id="top-user-email" class="muted"></span>
-            <button id="btn-logout" class="ghost">Salir</button>
+          <div id="top-user-menu" class="top-user-menu">
+            <button id="top-user-trigger" class="top-user-trigger" type="button" aria-label="Menu de usuario">
+              <span id="top-user-initial" class="top-user-initial">U</span>
+              <span id="top-user-email" class="top-user-email"></span>
+            </button>
+            <div id="top-user-popover" class="top-user-popover">
+              <button id="btn-logout" class="ghost" type="button">Cerrar sesion</button>
+            </div>
           </div>
         </header>
 
@@ -148,66 +152,81 @@
             <h2>Alumnos</h2>
             <p class="muted">Edita datos, estado, QR y carnets.</p>
 
-            <div class="grid two">
-              <label>
-                Buscar (dni/nombre)
-                <input id="student-search" type="text" placeholder="Ej. 12345678 o Lopez" />
-              </label>
-              <label>
-                <button id="btn-refresh-students" type="button" class="ghost">Actualizar alumnos</button>
-              </label>
+            <div class="module-block">
+              <h3 class="block-title">Busqueda rapida</h3>
+              <div class="grid two">
+                <label>
+                  Buscar (dni/nombre)
+                  <input id="student-search" type="text" placeholder="Ej. 12345678 o Lopez" />
+                </label>
+                <label>
+                  <button id="btn-refresh-students" type="button" class="ghost">Actualizar alumnos</button>
+                </label>
+              </div>
             </div>
 
-            <div class="grid four">
-              <label>DNI<input id="st-dni" type="text" maxlength="8" placeholder="12345678" /></label>
-              <label>Nombres<input id="st-nombres" type="text" placeholder="Ana" /></label>
-              <label>Apellidos<input id="st-apellidos" type="text" placeholder="Lopez" /></label>
-              <label>Fecha nacimiento<input id="st-birth-date" type="date" /></label>
+            <div class="module-block">
+              <h3 class="block-title">Ficha del alumno</h3>
+              <div class="grid four">
+                <label>DNI<input id="st-dni" type="text" maxlength="8" placeholder="12345678" /></label>
+                <label>Nombres<input id="st-nombres" type="text" placeholder="Ana" /></label>
+                <label>Apellidos<input id="st-apellidos" type="text" placeholder="Lopez" /></label>
+                <label>Fecha nacimiento<input id="st-birth-date" type="date" /></label>
+              </div>
+
+              <div class="grid four">
+                <label>Grado<input id="st-grado" type="number" min="1" max="5" value="1" /></label>
+                <label>Seccion<input id="st-seccion" type="text" value="A" /></label>
+                <label>Genero
+                  <select id="st-genero"><option value="F">F</option><option value="M">M</option></select>
+                </label>
+                <label>Cargo<input id="st-cargo" type="text" value="Alumno" /></label>
+              </div>
+
+              <div class="grid three">
+                <label>Estado
+                  <select id="st-status"><option value="ACTIVO">ACTIVO</option><option value="RETIRADO">RETIRADO</option><option value="TRASLADADO">TRASLADADO</option></select>
+                </label>
+                <label>Nota estado<input id="st-status-note" type="text" placeholder="Motivo o institucion destino" /></label>
+                <label><input id="st-id" type="hidden" /><button id="btn-save-student" type="button">Guardar alumno</button></label>
+              </div>
             </div>
 
-            <div class="grid four">
-              <label>Grado<input id="st-grado" type="number" min="1" max="5" value="1" /></label>
-              <label>Seccion<input id="st-seccion" type="text" value="A" /></label>
-              <label>Genero
-                <select id="st-genero"><option value="F">F</option><option value="M">M</option></select>
-              </label>
-              <label>Cargo<input id="st-cargo" type="text" value="Alumno" /></label>
+            <div class="module-block">
+              <h3 class="block-title">Acciones</h3>
+              <div class="row">
+                <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
+                <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
+                <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
+                <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
+                <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
+              </div>
             </div>
 
-            <div class="grid three">
-              <label>Estado
-                <select id="st-status"><option value="ACTIVO">ACTIVO</option><option value="RETIRADO">RETIRADO</option><option value="TRASLADADO">TRASLADADO</option></select>
-              </label>
-              <label>Nota estado<input id="st-status-note" type="text" placeholder="Motivo o institucion destino" /></label>
-              <label><input id="st-id" type="hidden" /><button id="btn-save-student" type="button">Guardar alumno</button></label>
+            <div class="module-block">
+              <h3 class="block-title">Importacion masiva</h3>
+              <div class="grid two">
+                <label>Importar alumnos (CSV/XLSX)<input id="students-file" type="file" accept=".csv,.xlsx,.xls" /></label>
+                <label><button id="btn-import-students" class="ghost" type="button">Importar archivo</button></label>
+              </div>
+              <p id="import-summary" class="muted"></p>
+              <div class="row">
+                <button id="btn-export-import-errors" class="ghost" type="button">Descargar errores de importacion</button>
+              </div>
             </div>
 
-            <div class="row">
-              <button id="btn-clear-student" class="ghost" type="button">Nuevo alumno</button>
-              <button id="btn-download-selected-qr" class="ghost" type="button">Descargar QR seleccionado</button>
-              <button id="btn-print-card" class="ghost" type="button">Imprimir carnet seleccionado</button>
-              <button id="btn-print-cards-bulk" class="ghost" type="button">Carnets PDF filtrados</button>
-              <button id="btn-export-students-csv" class="ghost" type="button">Exportar alumnos CSV</button>
-            </div>
-
-            <div class="grid two">
-              <label>Importar alumnos (CSV/XLSX)<input id="students-file" type="file" accept=".csv,.xlsx,.xls" /></label>
-              <label><button id="btn-import-students" class="ghost" type="button">Importar archivo</button></label>
-            </div>
-            <p id="import-summary" class="muted"></p>
-            <div class="row">
-              <button id="btn-export-import-errors" class="ghost" type="button">Descargar errores de importacion</button>
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>DNI</th><th>Estudiante</th><th>Grado</th><th>Genero</th><th>Estado</th><th>Edad</th><th>Accion</th>
-                  </tr>
-                </thead>
-                <tbody id="students-admin-body"></tbody>
-              </table>
+            <div class="module-block table-block">
+              <h3 class="block-title">Listado</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>DNI</th><th>Estudiante</th><th>Grado</th><th>Genero</th><th>Estado</th><th>Edad</th><th>Accion</th>
+                    </tr>
+                  </thead>
+                  <tbody id="students-admin-body"></tbody>
+                </table>
+              </div>
             </div>
           </section>
         </section>
@@ -216,36 +235,47 @@
           <section class="card">
             <h2>Centro de Reportes</h2>
             <p class="muted">Filtros por periodo, grado, seccion, genero, cargo y estado.</p>
-            <div class="grid four">
-              <label>Periodo<select id="rp-period"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mes</option><option value="range">Rango</option></select></label>
-              <label>Fecha referencia<input id="rp-ref-date" type="date" /></label>
-              <label>Inicio<input id="rp-start-date" type="date" /></label>
-              <label>Fin<input id="rp-end-date" type="date" /></label>
+            <div class="module-block">
+              <h3 class="block-title">Filtros</h3>
+              <div class="grid four">
+                <label>Periodo<select id="rp-period"><option value="day">Dia</option><option value="week">Semana</option><option value="month">Mes</option><option value="range">Rango</option></select></label>
+                <label>Fecha referencia<input id="rp-ref-date" type="date" /></label>
+                <label>Inicio<input id="rp-start-date" type="date" /></label>
+                <label>Fin<input id="rp-end-date" type="date" /></label>
+              </div>
+              <div class="grid four">
+                <label>Grado<select id="rp-grado"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
+                <label>Seccion<input id="rp-seccion" type="text" placeholder="A / B / C" /></label>
+                <label>Genero<select id="rp-genero"><option value="">Todos</option><option value="F">F</option><option value="M">M</option></select></label>
+                <label>Cargo<input id="rp-cargo" type="text" placeholder="Alumno / Brigadier" /></label>
+              </div>
+              <div class="grid three">
+                <label>Condicion<select id="rp-condition"><option value="all">Todos</option><option value="present">Asistieron</option><option value="absent">Faltaron</option></select></label>
+                <label><button id="btn-run-report" type="button">Generar reporte</button></label>
+                <label><button id="btn-export-report-csv" class="ghost" type="button">Exportar CSV</button></label>
+              </div>
             </div>
-            <div class="grid four">
-              <label>Grado<select id="rp-grado"><option value="">Todos</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
-              <label>Seccion<input id="rp-seccion" type="text" placeholder="A / B / C" /></label>
-              <label>Genero<select id="rp-genero"><option value="">Todos</option><option value="F">F</option><option value="M">M</option></select></label>
-              <label>Cargo<input id="rp-cargo" type="text" placeholder="Alumno / Brigadier" /></label>
+
+            <div class="module-block">
+              <h3 class="block-title">Exportacion</h3>
+              <div class="row">
+                <button id="btn-export-report-xlsx" class="ghost" type="button">Exportar XLSX</button>
+                <button id="btn-export-report-pdf" class="ghost" type="button">Exportar PDF</button>
+              </div>
             </div>
-            <div class="grid three">
-              <label>Condicion<select id="rp-condition"><option value="all">Todos</option><option value="present">Asistieron</option><option value="absent">Faltaron</option></select></label>
-              <label><button id="btn-run-report" type="button">Generar reporte</button></label>
-              <label><button id="btn-export-report-csv" class="ghost" type="button">Exportar CSV</button></label>
-            </div>
-            <div class="row">
-              <button id="btn-export-report-xlsx" class="ghost" type="button">Exportar XLSX</button>
-              <button id="btn-export-report-pdf" class="ghost" type="button">Exportar PDF</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th><th>Hora</th><th>DNI</th><th>Nombres</th><th>Apellidos</th><th>Grado</th><th>Seccion</th><th>Genero</th><th>Cargo</th><th>Profesor</th><th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody id="report-body"></tbody>
-              </table>
+
+            <div class="module-block table-block">
+              <h3 class="block-title">Resultado</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th><th>Hora</th><th>DNI</th><th>Nombres</th><th>Apellidos</th><th>Grado</th><th>Seccion</th><th>Genero</th><th>Cargo</th><th>Profesor</th><th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="report-body"></tbody>
+                </table>
+              </div>
             </div>
           </section>
         </section>

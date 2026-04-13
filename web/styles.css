@@ -214,18 +214,101 @@ body {
   padding: 12px 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
-.top-title {
-  font-size: 1.08rem;
-  font-family: "Sora", "Segoe UI", sans-serif;
-  font-weight: 700;
+.top-user-menu {
+  position: relative;
+}
+
+.top-user-trigger {
+  border: 1px solid #303741;
+  border-radius: 999px;
+  background: #1f252d;
+  color: var(--text);
+  min-height: 44px;
+  padding: 5px 8px 5px 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-user-trigger:hover {
+  border-color: #44505e;
+}
+
+.top-user-initial {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #cbe7df;
+  background: linear-gradient(150deg, #3a8070, #2a5a50);
+  color: #f0faf7;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-user-email {
+  color: #cfd7e2;
+  font-size: 0.95rem;
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-user-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: #1a1f25;
+  border: 1px solid #303741;
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 170px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 30;
+}
+
+.top-user-popover button {
+  width: 100%;
+}
+
+.top-user-menu:hover .top-user-popover,
+.top-user-menu.is-open .top-user-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .module-view {
   display: grid;
   gap: 14px;
+}
+
+.module-block {
+  margin: 14px 0 0;
+  border: 1px solid #2f353e;
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(180deg, #171b20 0%, #15191d 100%);
+}
+
+.module-block.table-block {
+  padding-bottom: 8px;
+}
+
+.block-title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ccfc3;
 }
 
 .card {
@@ -575,12 +658,16 @@ tr.is-selected {
   .topbar {
     top: 54px;
     padding: 10px;
-    flex-wrap: wrap;
-    gap: 8px;
+    justify-content: flex-end;
   }
 
-  .top-title {
-    font-size: 1rem;
+  .top-user-email {
+    max-width: 150px;
+    font-size: 0.86rem;
+  }
+
+  .top-user-popover {
+    min-width: 150px;
   }
 
   .card {
@@ -616,6 +703,10 @@ tr.is-selected {
 
   .row {
     gap: 6px;
+  }
+
+  .module-block {
+    padding: 10px;
   }
 }
 
